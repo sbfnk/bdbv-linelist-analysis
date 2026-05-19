@@ -1,0 +1,16 @@
+# Model outputs are regenerable from src/main.jl.
+output/
+
+# Private working notes / draft (not for GitHub).
+docs/
+
+# Editor / OS detritus
+.DS_Store
+*.swp
+*~
+
+# Julia
+*.cov
+
+# Tooling
+.claude/
