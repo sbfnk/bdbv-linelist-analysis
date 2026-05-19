@@ -80,7 +80,7 @@ adjustment.
 A separate gamma model with HCW shifts on each delay's log-mean
 shows no meaningful clinical-delay difference between HCWs and
 non-HCWs, but HCW notifications take ≈ 70% longer on average
-(borderline significant):
+(95% CrI just crossing 1):
 
 | Delay | exp(β_HCW) on mean (95% CrI) |
 |---|---|
