@@ -32,10 +32,6 @@ min bulk ESS ≥ 3,200, 0 divergent transitions across families.
 | **gamma** | **792.2** | **0.0**  | **9.1**  | **1.001** | **3,243** |
 | weibull   | 793.7  | +1.4  | 9.3    | 1.000  | 3,015   |
 
-**Gamma wins by ΔWAIC = 14.4** over LogNormal; Weibull essentially tied
-with Gamma. LogNormal over-fits the heavy right tail of the notification
-delays (max observed 86 d).
-
 ### Fitted atomic delay components (Gamma, doubly censored)
 
 | Component                | n  | Median (95% CrI) | Mean (95% CrI) |
