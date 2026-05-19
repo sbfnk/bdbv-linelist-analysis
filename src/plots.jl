@@ -19,14 +19,13 @@ const _DELAY_LABELS = (;
 )
 
 # Simulate a single double-interval-censored observation given a
-# latent distribution: primary event ~ Uniform(0, 1), latent delay
-# from `dist`, secondary observed in a 1-day bin. Returns the
-# observed integer delay.
+# latent distribution: primary event ~ Uniform(0, 1) within day 0,
+# latent delay from `dist`, secondary observed in a 1-day bin.
+# Returns the observed integer delay (floor of the secondary time).
 function _sim_one(rng, dist)
     primary = rand(rng)
     latent  = rand(rng, dist)
-    secondary = primary + latent
-    return floor(Int, secondary) - 0  # primary day = 0; observed bin = floor(secondary)
+    return floor(Int, primary + latent)
 end
 
 # Posterior predictive: for each draw, simulate `n_obs` observations

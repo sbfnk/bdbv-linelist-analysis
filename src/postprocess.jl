@@ -52,14 +52,14 @@ end
 # Weibull stores (log_mean, log_shape); mean = exp(log_mean).
 function _delay_summary(chn, name::Symbol, family::Symbol)
     if family == :lognormal
-        μ = vec(collect(chn[_lognormal_varname(name, :log_median)]))
-        σ = vec(collect(chn[_lognormal_varname(name, :log_sd)]))
+        μ = vec(collect(chn[_delay_varname(name, :log_median)]))
+        σ = vec(collect(chn[_delay_varname(name, :log_sd)]))
         median = exp.(μ)
         mean   = exp.(μ .+ σ.^2 ./ 2)
         return (; median, mean, μ, σ)
     else
-        log_mean  = vec(collect(chn[_other_varname(name, :log_mean)]))
-        log_shape = vec(collect(chn[_other_varname(name, :log_shape)]))
+        log_mean  = vec(collect(chn[_delay_varname(name, :log_mean)]))
+        log_shape = vec(collect(chn[_delay_varname(name, :log_shape)]))
         mean   = exp.(log_mean)
         # Median for Gamma/Weibull has no closed form — compute per draw.
         median = Vector{Float64}(undef, length(mean))
@@ -76,35 +76,29 @@ function _delay_summary(chn, name::Symbol, family::Symbol)
     end
 end
 
-# VarName access helpers — submodel-prefixed by the LHS name. Hard-
-# coded per family so the lookup is type-stable.
-function _lognormal_varname(name::Symbol, p::Symbol)
-    if name === :dist_oa
-        p === :log_median ? @varname(dist_oa.log_median) : @varname(dist_oa.log_sd)
-    elseif name === :dist_ad
-        p === :log_median ? @varname(dist_ad.log_median) : @varname(dist_ad.log_sd)
-    elseif name === :dist_ac
-        p === :log_median ? @varname(dist_ac.log_median) : @varname(dist_ac.log_sd)
-    elseif name === :dist_on
-        p === :log_median ? @varname(dist_on.log_median) : @varname(dist_on.log_sd)
-    else
-        error("unknown delay $name")
-    end
-end
+# VarName lookup table — submodel-prefixed by the LHS distribution
+# name. Hard-coded because `@varname` is a macro requiring a literal
+# expression so we cannot synthesise it from `(name, p)` at runtime.
+const _DELAY_VARNAMES = Dict{Tuple{Symbol,Symbol}, Any}(
+    (:dist_oa, :log_median) => @varname(dist_oa.log_median),
+    (:dist_oa, :log_sd)     => @varname(dist_oa.log_sd),
+    (:dist_oa, :log_mean)   => @varname(dist_oa.log_mean),
+    (:dist_oa, :log_shape)  => @varname(dist_oa.log_shape),
+    (:dist_ad, :log_median) => @varname(dist_ad.log_median),
+    (:dist_ad, :log_sd)     => @varname(dist_ad.log_sd),
+    (:dist_ad, :log_mean)   => @varname(dist_ad.log_mean),
+    (:dist_ad, :log_shape)  => @varname(dist_ad.log_shape),
+    (:dist_ac, :log_median) => @varname(dist_ac.log_median),
+    (:dist_ac, :log_sd)     => @varname(dist_ac.log_sd),
+    (:dist_ac, :log_mean)   => @varname(dist_ac.log_mean),
+    (:dist_ac, :log_shape)  => @varname(dist_ac.log_shape),
+    (:dist_on, :log_median) => @varname(dist_on.log_median),
+    (:dist_on, :log_sd)     => @varname(dist_on.log_sd),
+    (:dist_on, :log_mean)   => @varname(dist_on.log_mean),
+    (:dist_on, :log_shape)  => @varname(dist_on.log_shape),
+)
 
-function _other_varname(name::Symbol, p::Symbol)
-    if name === :dist_oa
-        p === :log_mean ? @varname(dist_oa.log_mean) : @varname(dist_oa.log_shape)
-    elseif name === :dist_ad
-        p === :log_mean ? @varname(dist_ad.log_mean) : @varname(dist_ad.log_shape)
-    elseif name === :dist_ac
-        p === :log_mean ? @varname(dist_ac.log_mean) : @varname(dist_ac.log_shape)
-    elseif name === :dist_on
-        p === :log_mean ? @varname(dist_on.log_mean) : @varname(dist_on.log_shape)
-    else
-        error("unknown delay $name")
-    end
-end
+_delay_varname(name::Symbol, p::Symbol) = _DELAY_VARNAMES[(name, p)]
 
 # ---------------------------------------------------------------------------
 # Per-parameter summaries
