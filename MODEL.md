@@ -106,10 +106,20 @@ NUTS via `Turing.jl`. Defaults:
 - `target_accept = 0.95`
 - `AutoForwardDiff()` AD backend
 - `DynamicPPL.InitFromPrior()` with a different RNG per chain
-- Seed 20260519
+- Seed 20260519 (parent), per-chain seeds derived from a child
+  `MersenneTwister` so `Random.seed!` is never called on the global
+  RNG
 
 About 1–2 minutes per family on a laptop. max R̂ ≤ 1.002, min bulk
 ESS ≥ 3,200, 0 divergent transitions across families.
+
+The diagnostics are: R̂ (the ratio of between-chain to within-chain
+variance — values near 1 indicate the four chains agree on the
+posterior), bulk ESS (effective sample size in the body of the
+distribution — values in the thousands indicate the chain has
+explored the posterior efficiently), and divergent transitions
+(HMC steps that hit numerical instability — zero divergences across
+all fits means the geometry is well-behaved).
 
 ## Model comparison
 

@@ -7,6 +7,18 @@ line list — the 2012 Isiro outbreak in Haut-Uélé, DRC, as deposited by
 — following the best-practice checklist of
 [Charniga *et al.* 2024 in PLOS Comput Biol](https://doi.org/10.1371/journal.pcbi.1012520).
 
+## Key finding
+
+The onset-to-notification mean of 8.83 d listed in
+[Rosello *et al.* 2015 Table 5](https://elifesciences.org/articles/09015)
+(and consequently propagated through PERG, WHO grEPI and other
+downstream parameter repositories) derives from a 30-day cap on the
+underlying dates. The uncapped Gamma fit gives a mean of 19.7 d
+(95% CrI 13.7 – 30.1) — a factor of ≈ 2.2 longer. The same cap is
+applied across at least four of the Rosello outbreaks; the published
+Isiro point estimate is downward-biased by roughly the same factor in
+all of them.
+
 ## Headline results
 
 NUTS, 4 chains × 1000 post-warmup samples. Convergence: max R̂ ≤ 1.002,
