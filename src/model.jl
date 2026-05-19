@@ -102,6 +102,10 @@ distributions are derived in post-processing.
 @model function bdbv_model(d; family::Symbol = :gamma, prior_scale::Float64 = 1.0)
     submodel = _DELAY_SUBMODEL[family]
 
+    # Delay-component suffixes used throughout: oa = onset→admission,
+    # ad = admission→death, ac = admission→discharge, on = onset→notification.
+    # `dist_*` is the underlying continuous distribution; `dic_*` is its
+    # doubly-interval-censored counterpart used in the likelihood.
     dist_oa ~ to_submodel(submodel(log(3.0),  prior_scale, prior_scale))
     dist_ad ~ to_submodel(submodel(log(6.0),  prior_scale, prior_scale))
     dist_ac ~ to_submodel(submodel(log(13.0), prior_scale, prior_scale))
@@ -117,6 +121,8 @@ distributions are derived in post-processing.
     d.admit_to_discharge ~ Turing.filldist(dic_ac, length(d.admit_to_discharge))
     d.onset_to_notif     ~ Turing.filldist(dic_on, length(d.onset_to_notif))
 
+    # CFR logistic regression coefficients: intercept, HCW indicator,
+    # case-definition indicator (probable vs confirmed), and standardised age.
     β_0   ~ Normal(0.0, 2.0)
     β_hcw ~ Normal(0.0, 1.0)
     β_def ~ Normal(0.0, 1.0)
@@ -186,6 +192,9 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
     family === :gamma ||
         throw(ArgumentError("stratified model is only supported for the :gamma family. Use bdbv_model for other families."))
 
+    # Shared shape and baseline (non-HCW) log-mean per delay component.
+    # Suffixes match the unstratified model: oa, ad, ac, on
+    # (onset→admission, admission→death, admission→discharge, onset→notification).
     log_shape_oa ~ Normal(0.0, 1.0)
     log_shape_ad ~ Normal(0.0, 1.0)
     log_shape_ac ~ Normal(0.0, 1.0)
@@ -202,9 +211,11 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
     β_ac_hcw ~ Normal(0.0, 0.5)
     β_on_hcw ~ Normal(0.0, 0.5)
 
-    # Per-stratum likelihoods per delay. The HCW/non-HCW subsets are
-    # pre-split fields of the data tuple so Turing treats them as
-    # observations rather than parameters.
+    # Per-stratum likelihoods per delay. Field-name suffix convention:
+    # `_h` = HCW subset, `_n` = non-HCW subset (e.g. `d.ac_n` is the
+    # non-HCW admission→discharge delays). These subsets are pre-split
+    # fields of the data tuple so Turing treats them as observations
+    # rather than parameters.
     if !isempty(d.oa_h)
         d.oa_h ~ Turing.filldist(double_interval_censored(
             _build_delay_dist(family, log_mean_oa + β_oa_hcw, log_shape_oa);
