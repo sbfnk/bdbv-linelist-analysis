@@ -1,0 +1,34 @@
+{
+  "title": "BDBV Isiro 2012: Bayesian delay distributions and stratified CFR",
+  "description": "Julia/Turing reanalysis of the 2012 Isiro Bundibugyo Ebola outbreak line list (Rosello et al. 2015) following the Charniga et al. (2024) best-practice checklist. Doubly-censored LogNormal/Gamma/Weibull delay fits via CensoredDistributions.jl, model comparison via WAIC, stratified case-fatality.",
+  "upload_type": "software",
+  "license": "MIT",
+  "keywords": [
+    "Ebola",
+    "Bundibugyo",
+    "delay distribution",
+    "Bayesian",
+    "Turing.jl",
+    "double interval censoring",
+    "case-fatality ratio"
+  ],
+  "creators": [
+    {
+      "name": "Funk, Sebastian",
+      "affiliation": "London School of Hygiene & Tropical Medicine",
+      "orcid": "0000-0002-2842-3406"
+    }
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.7554/eLife.09015",
+      "relation": "isDerivedFrom",
+      "resource_type": "publication-article"
+    },
+    {
+      "identifier": "10.1371/journal.pcbi.1012520",
+      "relation": "isReferencedBy",
+      "resource_type": "publication-article"
+    }
+  ]
+}
