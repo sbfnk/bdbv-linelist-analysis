@@ -99,7 +99,7 @@ the submodel pattern of CensoredDistributions.jl, and a stratified
 CFR logistic regression. The marginal onset→death and onset→discharge
 distributions are derived in post-processing.
 """
-@model function bdbv_model(d; family::Symbol = :lognormal, prior_scale::Float64 = 1.0)
+@model function bdbv_model(d; family::Symbol = :gamma, prior_scale::Float64 = 1.0)
     submodel = _DELAY_SUBMODEL[family]
 
     dist_oa ~ to_submodel(submodel(log(3.0),  prior_scale, prior_scale))
@@ -183,12 +183,9 @@ Reports per-delay HCW odds-ratio-like shifts (`exp(β_*_hcw)`) =
 multiplicative effect on the delay mean for HCWs vs non-HCWs.
 """
 @model function bdbv_model_stratified(d; family::Symbol = :gamma)
-    family in (:lognormal, :gamma) ||
-        throw(ArgumentError("stratified model supports :lognormal or :gamma only"))
+    family === :gamma ||
+        throw(ArgumentError("stratified model is only supported for the :gamma family. Use bdbv_model for other families."))
 
-    # Shape priors: Normal on the log scale for both families
-    # (exp(log_shape) is always positive). LogNormal interprets exp
-    # as σ; Gamma interprets it as the shape parameter k.
     log_shape_oa ~ Normal(0.0, 1.0)
     log_shape_ad ~ Normal(0.0, 1.0)
     log_shape_ac ~ Normal(0.0, 1.0)

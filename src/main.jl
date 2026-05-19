@@ -6,8 +6,11 @@ const FAMILIES = (:lognormal, :gamma, :weibull)
 $(TYPEDSIGNATURES)
 
 Run NUTS on `model` using ForwardDiff and per-chain prior init.
-Each chain seeded distinctly so R̂ remains a meaningful
-multi-chain diagnostic.
+
+A parent `MersenneTwister(seed)` is used to draw `chains` child
+seeds, which are passed as an explicit RNG vector to `sample`. This
+avoids mutating the global RNG and keeps results reproducible
+regardless of unrelated `Random` calls between runs.
 """
 function sample_fit(model;
         samples = 1000,
@@ -16,9 +19,11 @@ function sample_fit(model;
         seed = 20260519,
         progress = false,
     )
-    Random.seed!(seed)
     adtype = AutoForwardDiff()
+    parent = MersenneTwister(seed)
+    rng = MersenneTwister(rand(parent, UInt64))
     return sample(
+        rng,
         model,
         NUTS(target_accept; adtype),
         MCMCThreads(),
@@ -38,7 +43,7 @@ distribution `family`, print the summary, and save the posterior to
 function analyse(;
         data = LINELIST_PATH,
         output = OUTPUT_DIR,
-        family = :lognormal,
+        family = :gamma,
         samples = 1000,
         chains = 4,
         seed = 20260519,
@@ -111,10 +116,11 @@ function fit_death_mixture(;
     # Drop-in single-Gamma fit to all 27 onset→death pairs — the
     # population-level equivalent of Rosellos direct empirical fit,
     # for downstream users who want one distribution.
+    # No counts passed: p_admit defaults to Beta(1, 1) prior. The
+    # share is already estimated in chn_comm; only the delay fit from
+    # chn_all is used downstream.
     chn_all = sample_fit(community_death_model(d.onset_to_death_all;
-            family = family,
-            n_admit_died = d.n_admit_died,
-            n_comm_died  = d.n_comm_died);
+            family = family);
         samples = samples, chains = chains, seed = seed + 17,
         target_accept = target_accept, progress = progress)
 
@@ -313,7 +319,7 @@ function (@main)(args)
             default = OUTPUT_DIR
         "--family", "-f"
             help = "delay distribution family (lognormal | gamma | weibull)"
-            default = "lognormal"
+            default = "gamma"
         "--samples", "-n"
             help = "NUTS samples per chain"
             arg_type = Int

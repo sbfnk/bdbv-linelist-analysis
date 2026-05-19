@@ -50,9 +50,11 @@
 - 5 community deaths (died without recorded admission) contribute to
   the CFR block but not to the delay block; the model has no pathway
   for non-admitted deaths.
-- The stratified delay model is fitted for Gamma and LogNormal only.
-  Weibull's shape prior needed extra truncation that complicated the
-  stratified parametrisation.
+- The stratified delay model is restricted to the Gamma family. The
+  LogNormal parametrisation in the stratified model would need a
+  different SD prior to be consistent with the unstratified fit, and
+  the Weibull shape prior needed extra truncation that complicated
+  the stratified parametrisation. Gamma is the WAIC winner anyway.
 
 ## Inference
 
