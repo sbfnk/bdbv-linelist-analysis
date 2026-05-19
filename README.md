@@ -79,18 +79,19 @@ non-HCWs, but HCW notifications take ≈ 70% longer on average
 
 ### Death-pathway mixture (Gamma)
 
-Of the 27 Isiro fatal cases, 22 followed the admit-and-died pathway
-and 5 died in the community without recorded admission. The two
-pathways have substantially different onset → death distributions:
+Of the 27 Isiro fatal cases, 22 were admitted before dying and 5
+died in the community without recorded admission. The two pathways
+have different onset → death distributions:
 
 | Pathway | n | mean (95% CrI) | SD (95% CrI) | shape (95% CrI) | scale (95% CrI) |
 |---|---|---|---|---|---|
-| All deaths (population mean, Rosello-equivalent) | 27 | **11.4 (9.5 – 13.8)** | 5.5 (4.1 – 7.8) | 4.3 (2.4 – 7.2) | 2.6 (1.6 – 4.8) |
-| Community-died only (early-phase / no ETC) | 5 | **7.7 (5.2 – 13.2)** | 3.2 (1.5 – 10.6) | 5.6 (1.0 – 25.9) | 1.4 (0.3 – 9.5) |
-| Admit-pathway (post-ETC, derived oa ⊛ ad) | 22 | 11.8 (9.4 – 14.7) | — | — | — |
+| All deaths (Isiro mixture) | 27 | **11.4 (9.5 – 13.8)** | 5.5 (4.1 – 7.8) | 4.3 (2.4 – 7.2) | 2.6 (1.6 – 4.8) |
+| Community-died only | 5 | **7.7 (5.2 – 13.2)** | 3.2 (1.5 – 10.6) | 5.6 (1.0 – 25.9) | 1.4 (0.3 – 9.5) |
+| Admit-pathway (oa ⊛ ad convolution) | 22 | 11.8 (9.4 – 14.7) | — | — | — |
 
-`p_admit` (admit-pathway share among fatal cases) posterior: median
-0.83 (95% CrI 0.64 – 0.91).
+The Isiro share of fatal cases admitted before death —
+`P(admitted | died)` — was 0.83 (95% CrI 0.64 – 0.91). The all-deaths
+row combines the two pathway distributions weighted by this share.
 
 ### Prior sensitivity (Gamma family)
 
