@@ -7,24 +7,6 @@ line list — the 2012 Isiro outbreak in Haut-Uélé, DRC, as deposited by
 — following the best-practice checklist of
 [Charniga *et al.* 2024 in PLOS Comput Biol](https://doi.org/10.1371/journal.pcbi.1012520).
 
-Four atomic delay components are estimated under double interval
-censoring at the day level (onset → admission, admission → death,
-admission → discharge, onset → notification), comparing **LogNormal**,
-**Gamma** and **Weibull** families via WAIC. The marginal onset → death
-and onset → discharge distributions are derived in post-processing as
-convolutions of the atomic components — this enforces the per-case
-natural-history identity `onset → death = onset → admit + admit → death`
-without giving each marginal its own degrees of freedom. A stratified
-CFR logistic regression (HCW status, case definition, age) uses all
-52 cases. An HCW-stratified delay variant is also available.
-
-Sister project to
-[`andv-linelist-analysis`](https://github.com/sbfnk/andv-linelist-analysis)
-(Epuyén Andes hantavirus). The Isiro deposit has no transmission pairs
-and no exposure dates, so incubation period, serial interval and
-generation interval cannot be fitted from this data set — see
-[`LIMITATIONS.md`](LIMITATIONS.md).
-
 ## Headline results
 
 NUTS, 4 chains × 1000 post-warmup samples. Convergence: max R̂ ≤ 1.002,
@@ -111,53 +93,6 @@ the prior median):
 Posterior means shift by < 5% across the 4× prior-scale range —
 priors are confirmed weakly informative as intended.
 
-## Figures
-
-| File | Content |
-|---|---|
-| `figures/ppc_gamma.png` | Posterior predictive bars (4 panels, Gamma) |
-| `figures/ppc_family_comparison.png` | Side-by-side LogNormal / Gamma / Weibull PP checks |
-| `figures/epi_curve.png` | Weekly onset counts with HCW subcount stacked |
-
-## What this analysis does not do
-
-- **No transmission pairs in the deposit** → serial interval and
-  generation interval cannot be fitted from this data set; for
-  downstream Rt work use Zaire-EVD generation interval priors as a
-  starting point.
-- **Per-case censoring noise across the four delays of the same case
-  is treated as independent** (not biased, slightly inefficient).
-  A full latent-time joint model was prototyped but creates wedge-
-  shaped boundary geometry NUTS handles poorly at the 6 same-day-
-  admission cases; the marginal formulation here matches what
-  CensoredDistributions.jl naturally supports and what `Charniga
-  et al. 2024` recommends for retrospective complete-outbreak data.
-
-## Why these numbers are new
-
-The Rosello deposit has been openly available since 2015 and its
-sample-mean delay statistics have been ingested into the
-[PERG/epireview](https://mrc-ide.github.io/epireview/) and
-[grEPI](https://collaboratory.who.int/epidemiologicalparameters/repository/)
-parameter databases as Gamma(mean, SD). What's added here:
-
-1. **Proper double-interval-censoring correction** for every delay.
-2. **Bayesian posteriors** with credible intervals on every parameter.
-3. **Joint structure** enforcing the per-case natural-history identity
-   via convolution post-processing.
-4. **Family comparison** (Gamma > LogNormal by ΔWAIC = 14).
-5. **HCW × case-definition stratified CFR** with full Bayesian
-   uncertainty — neither the original Kratz 2015 paper nor the
-   PERG/grEPI database provides this.
-6. **HCW-stratified delays** (clinical delays unchanged; notification
-   delay borderline longer for HCWs).
-7. **Prior sensitivity sweep** confirming the priors are weakly
-   informative.
-8. **Reproducible Julia code** in a public repo for direct re-use.
-
-See [MODEL.md](MODEL.md) for the full model description and
-[LIMITATIONS.md](LIMITATIONS.md) for caveats.
-
 ## Repository layout
 
 ```
@@ -215,17 +150,6 @@ Licensed CC-BY 4.0. The five admission-date encoding outliers (−89,
 −5, −4, −1, 328720 days from onset) are programmatically set to
 missing during loading. One notification-date outlier (delay of −62
 days) is similarly dropped. No other modifications.
-
-## Citing
-
-If you use the model or the cleaned line list, please cite Rosello
-*et al.* 2015 above, the Charniga *et al.* 2024 best-practice paper
-this analysis follows, and:
-
-> Funk S. Bundibugyo Ebola virus — Bayesian delay distributions
-> from the 2012 Isiro outbreak. 2026. https://github.com/sbfnk/bdbv-linelist-analysis
-
-(see `CITATION.cff` for the machine-readable form).
 
 ## Authors
 
