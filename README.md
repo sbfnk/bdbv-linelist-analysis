@@ -109,29 +109,6 @@ the prior median):
 Posterior means shift by < 5% across the 4× prior-scale range —
 priors are confirmed weakly informative as intended.
 
-## Repository layout
-
-```
-src/
-  BdbvLinelist.jl   — module entry point and imports
-  data.jl           — line list loading, outlier scrub, per-pair delay extraction
-  model.jl          — joint Turing model + stratified + community-death variants
-  postprocess.jl    — diagnostics, summaries, WAIC, convolution post-processing
-  plots.jl          — Makie posterior predictive + epi curve
-  main.jl           — analyse() / compare_families() / sensitivity() / fit_death_mixture() drivers
-data/
-  linelist.csv      — Isiro 2012 BDBV subset of Rosello 2015 eLife supp 1
-figures/
-  ppc_gamma.png
-  ppc_family_comparison.png
-  epi_curve.png
-Project.toml        — Julia package manifest
-Manifest.toml       — locked dependency versions
-CITATION.cff        — citation metadata
-.zenodo.json        — Zenodo deposit metadata
-LICENSE             — MIT
-```
-
 ## Running
 
 ```bash
