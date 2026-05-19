@@ -36,58 +36,64 @@
 # Bernoulli's domain check happy when η drifts during NUTS warmup.
 _logistic(x) = clamp(inv(1 + exp(-x)), 1e-10, 1.0 - 1e-10)
 
-"""
-$(TYPEDSIGNATURES)
+# Family singletons used for dispatch. The symbol-keyed public API
+# (`:lognormal`, `:gamma`, `:weibull`) is converted to one of these
+# at a single boundary, `delay_family`; everything internal dispatches
+# on the type.
+abstract type DelayFamily end
+struct LogNormalDelay <: DelayFamily end
+struct GammaDelay     <: DelayFamily end
+struct WeibullDelay   <: DelayFamily end
 
-Submodel returning a LogNormal delay distribution, parametrised by
-log-mean and log-SD (the canonical LogNormal `(μ, σ)`). Used with
-`to_submodel()` so the (log_mean, log_sd) pair is prefixed by the
-LHS name.
-"""
-@model function delay_lognormal(log_median_loc, log_median_scale, log_sd_scale)
-    log_median ~ Normal(log_median_loc, log_median_scale)
-    log_sd     ~ truncated(Normal(0.0, log_sd_scale); lower = 0.0)
-    return LogNormal(log_median, log_sd)
-end
+delay_family(s::Symbol) =
+    s === :lognormal ? LogNormalDelay() :
+    s === :gamma     ? GammaDelay()     :
+    s === :weibull   ? WeibullDelay()   :
+    throw(ArgumentError("unknown family $s"))
 
-"""
-$(TYPEDSIGNATURES)
+family_symbol(::LogNormalDelay) = :lognormal
+family_symbol(::GammaDelay)     = :gamma
+family_symbol(::WeibullDelay)   = :weibull
 
-Submodel returning a Gamma delay distribution parametrised by log-mean
-and log-shape (shape `k`, scale `mean / k`).
-"""
-@model function delay_gamma(log_mean_loc, log_mean_scale, log_shape_scale)
-    log_mean  ~ Normal(log_mean_loc, log_mean_scale)
-    log_shape ~ Normal(0.0, log_shape_scale)
+# Construct a delay distribution from already-sampled location and
+# scale parameters. For LogNormal the pair is (log_median, log_sd);
+# for Gamma and Weibull it is (log_mean, log_shape).
+build_delay_dist(::LogNormalDelay, log_median, log_sd) =
+    LogNormal(log_median, exp(log_sd))
+
+function build_delay_dist(::GammaDelay, log_mean, log_shape)
     shape = exp(log_shape)
-    scale = exp(log_mean) / shape
-    return Gamma(shape, scale)
+    return Gamma(shape, exp(log_mean) / shape)
 end
 
-"""
-$(TYPEDSIGNATURES)
-
-Submodel returning a Weibull delay distribution parametrised by
-log-mean and log-shape. Weibull `α` is the shape; scale `θ` is set
-so that `θ Γ(1 + 1/α) = mean`. The log-shape prior is truncated
-to keep `α ∈ (≈0.37, ≈2.7)` so `Γ(1 + 1/α)` doesn't blow up and
-the scale stays positive under NUTS.
-"""
-@model function delay_weibull(log_mean_loc, log_mean_scale, log_shape_scale)
-    log_mean  ~ Normal(log_mean_loc, log_mean_scale)
-    log_shape ~ truncated(Normal(0.0, log_shape_scale); lower = -1.0, upper = 1.0)
+function build_delay_dist(::WeibullDelay, log_mean, log_shape)
     shape = exp(log_shape)
-    scale = exp(log_mean) / SpecialFunctions.gamma(1 + 1 / shape)
-    return Weibull(shape, scale)
+    return Weibull(shape, exp(log_mean) / SpecialFunctions.gamma(1 + 1 / shape))
 end
 
-# Map family symbol → submodel constructor. Used by `bdbv_model` to
-# select the family without writing three near-identical model bodies.
-const _DELAY_SUBMODEL = Dict(
-    :lognormal => delay_lognormal,
-    :gamma     => delay_gamma,
-    :weibull   => delay_weibull,
-)
+# Prior submodels — one method per family. Each samples the
+# family's natural location/scale pair and returns the constructed
+# distribution. Used with `to_submodel()` so the sample names are
+# prefixed by the LHS variable.
+@model function delay_prior(::LogNormalDelay, loc_loc, loc_scale, sd_scale)
+    log_median ~ Normal(loc_loc, loc_scale)
+    log_sd     ~ truncated(Normal(0.0, sd_scale); lower = 0.0)
+    return build_delay_dist(LogNormalDelay(), log_median, log_sd)
+end
+
+@model function delay_prior(::GammaDelay, mean_loc, mean_scale, shape_scale)
+    log_mean  ~ Normal(mean_loc, mean_scale)
+    log_shape ~ Normal(0.0, shape_scale)
+    return build_delay_dist(GammaDelay(), log_mean, log_shape)
+end
+
+# Weibull's log-shape is truncated to keep `α ∈ (≈0.37, ≈2.7)` so
+# `Γ(1 + 1/α)` stays well-defined and the scale stays positive under NUTS.
+@model function delay_prior(::WeibullDelay, mean_loc, mean_scale, shape_scale)
+    log_mean  ~ Normal(mean_loc, mean_scale)
+    log_shape ~ truncated(Normal(0.0, shape_scale); lower = -1.0, upper = 1.0)
+    return build_delay_dist(WeibullDelay(), log_mean, log_shape)
+end
 
 """
 $(TYPEDSIGNATURES)
@@ -100,16 +106,16 @@ CFR logistic regression. The marginal onset→death and onset→discharge
 distributions are derived in post-processing.
 """
 @model function bdbv_model(d; family::Symbol = :gamma, prior_scale::Float64 = 1.0)
-    submodel = _DELAY_SUBMODEL[family]
+    fam = delay_family(family)
 
     # Delay-component suffixes used throughout: oa = onset→admission,
     # ad = admission→death, ac = admission→discharge, on = onset→notification.
     # `dist_*` is the underlying continuous distribution; `dic_*` is its
     # doubly-interval-censored counterpart used in the likelihood.
-    dist_oa ~ to_submodel(submodel(log(3.0),  prior_scale, prior_scale))
-    dist_ad ~ to_submodel(submodel(log(6.0),  prior_scale, prior_scale))
-    dist_ac ~ to_submodel(submodel(log(13.0), prior_scale, prior_scale))
-    dist_on ~ to_submodel(submodel(log(7.0),  prior_scale, prior_scale))
+    dist_oa ~ to_submodel(delay_prior(fam, log(3.0),  prior_scale, prior_scale))
+    dist_ad ~ to_submodel(delay_prior(fam, log(6.0),  prior_scale, prior_scale))
+    dist_ac ~ to_submodel(delay_prior(fam, log(13.0), prior_scale, prior_scale))
+    dist_on ~ to_submodel(delay_prior(fam, log(7.0),  prior_scale, prior_scale))
 
     dic_oa = double_interval_censored(dist_oa; interval = 1.0)
     dic_ad = double_interval_censored(dist_ad; interval = 1.0)
@@ -149,8 +155,8 @@ build the death-pathway mixture marginal.
 """
 @model function community_death_model(delays; family::Symbol = :gamma,
         n_admit_died::Int = 0, n_comm_died::Int = 0)
-    submodel = _DELAY_SUBMODEL[family]
-    dist_cd ~ to_submodel(submodel(log(8.0), 1.0, 1.0))
+    fam = delay_family(family)
+    dist_cd ~ to_submodel(delay_prior(fam, log(8.0), 1.0, 1.0))
     if !isempty(delays)
         delays ~ Turing.filldist(
             double_interval_censored(dist_cd; interval = 1.0),
@@ -159,23 +165,6 @@ build the death-pathway mixture marginal.
     end
     # p_admit ~ Beta(1+n_admit, 1+n_comm); independent of the delay fit.
     p_admit ~ Beta(1 + n_admit_died, 1 + n_comm_died)
-end
-
-# Inline construction of a delay distribution from (log_mean, log_shape)
-# given a family. Matches the parametrisation of the submodels above.
-function _build_delay_dist(family::Symbol, log_mean, log_shape)
-    if family == :lognormal
-        # For LogNormal, `log_mean` here is interpreted as log_median.
-        return LogNormal(log_mean, exp(log_shape))
-    elseif family == :gamma
-        shape = exp(log_shape)
-        return Gamma(shape, exp(log_mean) / shape)
-    elseif family == :weibull
-        shape = exp(log_shape)
-        return Weibull(shape, exp(log_mean) / SpecialFunctions.gamma(1 + 1 / shape))
-    else
-        error("unknown family $family")
-    end
 end
 
 """
@@ -191,6 +180,7 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
 @model function bdbv_model_stratified(d; family::Symbol = :gamma)
     family === :gamma ||
         throw(ArgumentError("stratified model is only supported for the :gamma family. Use bdbv_model for other families."))
+    fam = delay_family(family)
 
     # Shared shape and baseline (non-HCW) log-mean per delay component.
     # Suffixes match the unstratified model: oa, ad, ac, on
@@ -218,45 +208,45 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
     # rather than parameters.
     if !isempty(d.oa_h)
         d.oa_h ~ Turing.filldist(double_interval_censored(
-            _build_delay_dist(family, log_mean_oa + β_oa_hcw, log_shape_oa);
+            build_delay_dist(fam, log_mean_oa + β_oa_hcw, log_shape_oa);
             interval = 1.0), length(d.oa_h))
     end
     if !isempty(d.oa_n)
         d.oa_n ~ Turing.filldist(double_interval_censored(
-            _build_delay_dist(family, log_mean_oa, log_shape_oa);
+            build_delay_dist(fam, log_mean_oa, log_shape_oa);
             interval = 1.0), length(d.oa_n))
     end
 
     if !isempty(d.ad_h)
         d.ad_h ~ Turing.filldist(double_interval_censored(
-            _build_delay_dist(family, log_mean_ad + β_ad_hcw, log_shape_ad);
+            build_delay_dist(fam, log_mean_ad + β_ad_hcw, log_shape_ad);
             interval = 1.0), length(d.ad_h))
     end
     if !isempty(d.ad_n)
         d.ad_n ~ Turing.filldist(double_interval_censored(
-            _build_delay_dist(family, log_mean_ad, log_shape_ad);
+            build_delay_dist(fam, log_mean_ad, log_shape_ad);
             interval = 1.0), length(d.ad_n))
     end
 
     if !isempty(d.ac_h)
         d.ac_h ~ Turing.filldist(double_interval_censored(
-            _build_delay_dist(family, log_mean_ac + β_ac_hcw, log_shape_ac);
+            build_delay_dist(fam, log_mean_ac + β_ac_hcw, log_shape_ac);
             interval = 1.0), length(d.ac_h))
     end
     if !isempty(d.ac_n)
         d.ac_n ~ Turing.filldist(double_interval_censored(
-            _build_delay_dist(family, log_mean_ac, log_shape_ac);
+            build_delay_dist(fam, log_mean_ac, log_shape_ac);
             interval = 1.0), length(d.ac_n))
     end
 
     if !isempty(d.on_h)
         d.on_h ~ Turing.filldist(double_interval_censored(
-            _build_delay_dist(family, log_mean_on + β_on_hcw, log_shape_on);
+            build_delay_dist(fam, log_mean_on + β_on_hcw, log_shape_on);
             interval = 1.0), length(d.on_h))
     end
     if !isempty(d.on_n)
         d.on_n ~ Turing.filldist(double_interval_censored(
-            _build_delay_dist(family, log_mean_on, log_shape_on);
+            build_delay_dist(fam, log_mean_on, log_shape_on);
             interval = 1.0), length(d.on_n))
     end
 

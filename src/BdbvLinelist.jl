@@ -31,7 +31,8 @@ include("main.jl")
 
 export load_linelist, build_data, atomic_delays
 export bdbv_model, bdbv_model_stratified, community_death_model
-export delay_lognormal, delay_gamma, delay_weibull
+export DelayFamily, LogNormalDelay, GammaDelay, WeibullDelay,
+       delay_family, family_symbol, delay_prior, build_delay_dist
 export sample_fit, analyse, compare_families, sensitivity, fit_death_mixture
 export summarise, save_posterior, compute_waic
 export diagnostics
