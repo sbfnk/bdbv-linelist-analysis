@@ -77,6 +77,28 @@ non-HCWs, but HCW notifications take ≈ 70% longer on average
 | Admission → discharge | 0.95 (0.45 – 1.85) |
 | Onset → notification  | **1.70 (0.95 – 3.17)** |
 
+### Death-pathway mixture (Gamma)
+
+Of the 27 Isiro fatal cases, 22 followed the admit-and-died pathway
+and 5 died in the community without recorded admission. The two
+pathways have substantially different onset → death distributions:
+
+| Pathway | n | mean (95% CrI) | SD (95% CrI) | shape (95% CrI) | scale (95% CrI) |
+|---|---|---|---|---|---|
+| All deaths (population mean, Rosello-equivalent) | 27 | **11.4 (9.5 – 13.8)** | 5.5 (4.1 – 7.8) | 4.3 (2.4 – 7.2) | 2.6 (1.6 – 4.8) |
+| Community-died only (early-phase / no ETC) | 5 | **7.7 (5.2 – 13.2)** | 3.2 (1.5 – 10.6) | 5.6 (1.0 – 25.9) | 1.4 (0.3 – 9.5) |
+| Admit-pathway (post-ETC, derived oa ⊛ ad) | 22 | 11.8 (9.4 – 14.7) | — | — | — |
+
+`p_admit` (admit-pathway share among fatal cases) posterior: median
+0.83 (95% CrI 0.64 – 0.91).
+
+For downstream EpiNow2 / scenario use, pick the row matching the
+assumed care-access regime and plug the Gamma `(shape, scale)`
+directly. The community-died fit is wide because n = 5; for the
+very early phase of a new BDBV outbreak (no ETC yet) it is
+nevertheless the more appropriate prior than the admit-pathway
+convolution.
+
 ### Prior sensitivity (Gamma family)
 
 Mean delays under three prior-scale settings on the log-mean and
