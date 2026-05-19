@@ -92,13 +92,6 @@ pathways have substantially different onset → death distributions:
 `p_admit` (admit-pathway share among fatal cases) posterior: median
 0.83 (95% CrI 0.64 – 0.91).
 
-For downstream EpiNow2 / scenario use, pick the row matching the
-assumed care-access regime and plug the Gamma `(shape, scale)`
-directly. The community-died fit is wide because n = 5; for the
-very early phase of a new BDBV outbreak (no ETC yet) it is
-nevertheless the more appropriate prior than the admit-pathway
-convolution.
-
 ### Prior sensitivity (Gamma family)
 
 Mean delays under three prior-scale settings on the log-mean and
