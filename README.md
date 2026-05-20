@@ -1,6 +1,6 @@
 # Bundibugyo Ebola virus — Bayesian delay-distribution and stratified CFR estimation from the 2012 Isiro outbreak
 
-[![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://sbfnk.github.io/bdbv-linelist-analysis/dev)
+[![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://epiforecasts.io/bdbv-linelist-analysis/dev)
 
 A Julia + Turing + [CensoredDistributions.jl](https://censoreddistributions.epiaware.org/)
 re-analysis of the only publicly accessible Bundibugyo ebolavirus (BDBV)
@@ -9,15 +9,15 @@ line list — the 2012 Isiro outbreak in Haut-Uélé, DRC, as deposited by
 — following the best-practice checklist of
 [Charniga *et al.* 2024 in PLOS Comput Biol](https://doi.org/10.1371/journal.pcbi.1012520).
 
-🌐 **[Analysis walkthrough](https://sbfnk.github.io/bdbv-linelist-analysis/dev/analysis)** — full tables, figures, and diagnostics regenerated from the current model on every push to `main` (HTML)
+🌐 **[Analysis walkthrough](https://epiforecasts.io/bdbv-linelist-analysis/dev/analysis)** — full tables, figures, and diagnostics regenerated from the current model on every push to `main` (HTML)
 
-📦 **[Posterior CSV and figures](https://github.com/sbfnk/bdbv-linelist-analysis/releases/tag/main-latest)** — `main-latest` rolling release bundle
+📦 **[Posterior CSV and figures](https://github.com/epiforecasts/bdbv-linelist-analysis/releases/tag/main-latest)** — `main-latest` rolling release bundle
 
-📖 **[Model description](https://sbfnk.github.io/bdbv-linelist-analysis/dev/model)** — priors, likelihood, inference (HTML)
+📖 **[Model description](https://epiforecasts.io/bdbv-linelist-analysis/dev/model)** — priors, likelihood, inference (HTML)
 
-⚠️ **[Limitations](https://sbfnk.github.io/bdbv-linelist-analysis/dev/limitations)** — known caveats around data, model, and generalisability (HTML)
+⚠️ **[Limitations](https://epiforecasts.io/bdbv-linelist-analysis/dev/limitations)** — known caveats around data, model, and generalisability (HTML)
 
-📑 **[API reference](https://sbfnk.github.io/bdbv-linelist-analysis/dev/api)** — exported functions (HTML)
+📑 **[API reference](https://epiforecasts.io/bdbv-linelist-analysis/dev/api)** — exported functions (HTML)
 
 ## Running
 

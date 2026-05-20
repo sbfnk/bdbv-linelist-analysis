@@ -40,14 +40,14 @@ makedocs(;
         "API Reference" => "api.md"
     ],
     format = DocumenterVitepress.MarkdownVitepress(;
-        repo = "github.com/sbfnk/bdbv-linelist-analysis",
+        repo = "github.com/epiforecasts/bdbv-linelist-analysis",
         devbranch = "main",
         devurl = "dev"
     )
 )
 
 DocumenterVitepress.deploydocs(;
-    repo = "github.com/sbfnk/bdbv-linelist-analysis",
+    repo = "github.com/epiforecasts/bdbv-linelist-analysis",
     target = "build",
     branch = "gh-pages",
     devbranch = "main",

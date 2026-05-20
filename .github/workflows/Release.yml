@@ -50,7 +50,7 @@ jobs:
 
             Rolling release — overwritten on every push to `main`.
             For a rendered walkthrough see
-            https://sbfnk.github.io/bdbv-linelist-analysis/dev/analysis.
+            https://epiforecasts.io/bdbv-linelist-analysis/dev/analysis.
           files: results.zip
           make_latest: 'false'
           draft: false

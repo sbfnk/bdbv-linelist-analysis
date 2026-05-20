@@ -1,5 +1,5 @@
 ```@meta
-EditURL = "https://github.com/sbfnk/bdbv-linelist-analysis/blob/main/LIMITATIONS.md"
+EditURL = "https://github.com/epiforecasts/bdbv-linelist-analysis/blob/main/LIMITATIONS.md"
 ```
 
 ```@eval

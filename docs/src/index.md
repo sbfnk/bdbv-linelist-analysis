@@ -13,7 +13,7 @@ A Julia + Turing + [CensoredDistributions.jl](https://censoreddistributions.epia
 - [Analysis walkthrough](analysis.md) — executable walkthrough that regenerates the headline tables and figures from the fitted model at build time.
 - [API Reference](api.md) — exported functions.
 
-Raw artefacts (posterior CSV and figures) from the most recent main build live on the [`main-latest` release](https://github.com/sbfnk/bdbv-linelist-analysis/releases/tag/main-latest).
+Raw artefacts (posterior CSV and figures) from the most recent main build live on the [`main-latest` release](https://github.com/epiforecasts/bdbv-linelist-analysis/releases/tag/main-latest).
 
 ## Citing
 
