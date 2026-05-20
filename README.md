@@ -1,9 +1,6 @@
 # Bundibugyo Ebola virus — Bayesian delay-distribution and stratified CFR estimation from the 2012 Isiro outbreak
 
-[![Docs (dev)](https://img.shields.io/badge/docs-dev-blue.svg)](https://sbfnk.github.io/bdbv-linelist-analysis/dev)
-
-Full documentation — write-up with all tables, model description, API
-reference — at <https://sbfnk.github.io/bdbv-linelist-analysis/dev>.
+[![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://sbfnk.github.io/bdbv-linelist-analysis/dev)
 
 A Julia + Turing + [CensoredDistributions.jl](https://censoreddistributions.epiaware.org/)
 re-analysis of the only publicly accessible Bundibugyo ebolavirus (BDBV)
@@ -12,28 +9,15 @@ line list — the 2012 Isiro outbreak in Haut-Uélé, DRC, as deposited by
 — following the best-practice checklist of
 [Charniga *et al.* 2024 in PLOS Comput Biol](https://doi.org/10.1371/journal.pcbi.1012520).
 
-## Key finding
+🌐 **[Analysis walkthrough](https://sbfnk.github.io/bdbv-linelist-analysis/dev/analysis)** — full tables, figures, and diagnostics regenerated from the current model on every push to `main` (HTML)
 
-The onset-to-notification mean of 8.83 d listed in
-[Rosello *et al.* 2015 Table 5](https://elifesciences.org/articles/09015)
-(and consequently propagated through PERG, WHO grEPI and other
-downstream parameter repositories) derives from a 30-day cap on the
-underlying dates. The uncapped Gamma fit gives a mean of 19.7 d
-(95% CrI 13.7 – 30.1) — a factor of ≈ 2.2 longer.
+📦 **[Posterior CSV and figures](https://github.com/sbfnk/bdbv-linelist-analysis/releases/tag/main-latest)** — `main-latest` rolling release bundle
 
-## Results
+📖 **[Model description](https://sbfnk.github.io/bdbv-linelist-analysis/dev/model)** — priors, likelihood, inference (HTML)
 
-Rendered walkthrough with all tables and figures regenerated from the
-current model on every push to `main`:
-<https://sbfnk.github.io/bdbv-linelist-analysis/dev/analysis>.
+⚠️ **[Limitations](https://sbfnk.github.io/bdbv-linelist-analysis/dev/limitations)** — known caveats around data, model, and generalisability (HTML)
 
-Raw artefacts from the most recent main build (posterior CSV and all figures):
-<https://github.com/sbfnk/bdbv-linelist-analysis/releases/tag/main-latest>.
-
-## Methods and limitations
-
-Model description and priors are in [MODEL.md](MODEL.md).
-Known caveats are in [LIMITATIONS.md](LIMITATIONS.md).
+📑 **[API reference](https://sbfnk.github.io/bdbv-linelist-analysis/dev/api)** — exported functions (HTML)
 
 ## Running
 
