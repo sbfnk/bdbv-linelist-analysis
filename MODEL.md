@@ -32,7 +32,7 @@ priors are comparable:
 For Weibull, `log_shape` is truncated to `(−1, 1)` so `Γ(1 + 1/α)`
 doesn't blow up. The Weibull stratified model is not supported.
 
-## Joint structure via convolution post-processing
+## Compound delays via convolution post-processing
 
 Fitting `onset → death` and `onset → discharge` separately alongside
 their atomic components would violate the per-case identity

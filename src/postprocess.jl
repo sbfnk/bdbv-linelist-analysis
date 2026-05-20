@@ -1,5 +1,5 @@
 ## Posterior summaries, model comparison, and CSV output for the
-## joint BDBV model.
+## BDBV delay + CFR model.
 
 # ---------------------------------------------------------------------------
 # Diagnostics

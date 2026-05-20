@@ -36,7 +36,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Load the line list, fit the joint BDBV delay + CFR model under one
+Load the line list, fit the BDBV delay + CFR model under one
 distribution `family`, print the summary, and save the posterior to
 `output/posterior_<family>.csv`. Returns `(chain, post, diag)`.
 """
@@ -309,7 +309,7 @@ function compare_families(;
 end
 
 function (@main)(args)
-    s = ArgParseSettings(; description = "Fit BDBV Isiro 2012 joint model")
+    s = ArgParseSettings(; description = "Fit BDBV Isiro 2012 delay + CFR model")
     @add_arg_table! s begin
         "--data", "-d"
             help = "path to line-list CSV"

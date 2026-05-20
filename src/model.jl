@@ -1,4 +1,9 @@
-## Joint Turing model for the 2012 Isiro BDBV outbreak.
+## Turing model for the 2012 Isiro BDBV outbreak. The four atomic
+## delay components and the CFR block share no latent variables —
+## the natural-history identity (onset→death = onset→admit ⊕
+## admit→death) is recovered in post-processing via convolution
+## (see LIMITATIONS.md for why the latent-time joint variant was
+## abandoned).
 ##
 ## Four atomic delay components are fitted with double interval
 ## censoring at the day level (`CensoredDistributions.double_interval_censored`,
@@ -98,12 +103,14 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Joint Turing model for the BDBV Isiro 2012 line list, parametrised
-by the choice of delay-distribution family (`:lognormal`, `:gamma`,
+Turing model for the BDBV Isiro 2012 line list, parametrised by
+the choice of delay-distribution family (`:lognormal`, `:gamma`,
 or `:weibull`). Estimates four doubly-censored delay components via
 the submodel pattern of CensoredDistributions.jl, and a stratified
-CFR logistic regression. The marginal onset→death and onset→discharge
-distributions are derived in post-processing.
+CFR logistic regression. The delay components and CFR block share
+no latent variables; the marginal onset→death and onset→discharge
+distributions are derived in post-processing as convolutions of
+the atomic components.
 """
 @model function bdbv_model(d; family::Symbol = :gamma, prior_scale::Float64 = 1.0)
     fam = delay_family(family)
@@ -170,9 +177,9 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Stratified-by-HCW joint model. Adds an `β_*_hcw` log-mean shift to
-each of the four atomic delay components, so HCW vs non-HCW cases
-share the shape parameter but can differ on the central tendency.
+Stratified-by-HCW model. Adds an `β_*_hcw` log-mean shift to each
+of the four atomic delay components, so HCW vs non-HCW cases share
+the shape parameter but can differ on the central tendency.
 
 Reports per-delay HCW odds-ratio-like shifts (`exp(β_*_hcw)`) =
 multiplicative effect on the delay mean for HCWs vs non-HCWs.
