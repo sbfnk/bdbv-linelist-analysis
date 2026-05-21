@@ -11,8 +11,8 @@ using Distributions: Normal, LogNormal, Gamma, Weibull, Bernoulli, Beta,
                      Uniform, truncated, logpdf, cdf
 using SpecialFunctions: SpecialFunctions
 using CensoredDistributions: double_interval_censored
-using Makie: Figure, Axis, Relative, barplot!, lines!, band!, xlims!,
-             rowsize!, axislegend
+using Makie: Figure, Axis, Relative, barplot!, lines!, band!, vlines!,
+             xlims!, rowsize!, axislegend
 using CairoMakie: CairoMakie
 using DocStringExtensions: TYPEDSIGNATURES
 using Printf: @printf, @sprintf
