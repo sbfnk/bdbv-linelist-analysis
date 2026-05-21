@@ -4,7 +4,8 @@
 ##  - the observed integer-delay histogram (bars),
 ##  - the posterior predictive day-bin counts under the fitted
 ##    double-censoring model (median + 95% band per day),
-##  - the latent fitted continuous distribution (median + 95% band).
+##  - the Rosello et al. 2015 Table 5 mean as a dashed vertical line
+##    for direct comparison.
 ##
 ## Posterior predictive bars are simulated by drawing from the fitted
 ## distribution per posterior draw, applying primary + secondary
@@ -16,6 +17,18 @@ const _DELAY_LABELS = (;
     ad = "admission → death",
     ac = "admission → discharge",
     on = "onset → notification",
+)
+
+# Rosello et al. 2015 Table 5 point estimates for Isiro 2012 (mean
+# days). All four were fitted with a 30-day cap on the underlying
+# dates; the onset → notification value in particular is the source
+# of the downward-biased 8.83 d figure propagated through the
+# downstream parameter repositories.
+const _ROSELLO_MEANS = (;
+    oa = 4.00,
+    ad = 7.59,
+    ac = 8.00,
+    on = 8.83,
 )
 
 # Simulate a single double-interval-censored observation given a
@@ -54,24 +67,6 @@ function _ppc_bins(rng, S::Int, draws_to_dist, n_obs::Int; max_bin = 100,
     return (; bin_centres, ppc_lo, ppc_med, ppc_hi)
 end
 
-# Posterior density of the latent continuous distribution at a grid
-# of points. Returns (; xs, dens_lo, dens_med, dens_hi).
-function _latent_density(draws_to_dist; xmax = 100.0, n_x = 200)
-    S = length(draws_to_dist)
-    xs = range(0.01, xmax; length = n_x)
-    pdfs = Matrix{Float64}(undef, S, n_x)
-    for s in 1:S
-        dist = draws_to_dist(s)
-        for (j, x) in pairs(xs)
-            pdfs[s, j] = pdf(dist, x)
-        end
-    end
-    dens_lo  = [quantile(pdfs[:, j], 0.025) for j in 1:n_x]
-    dens_med = [quantile(pdfs[:, j], 0.5)   for j in 1:n_x]
-    dens_hi  = [quantile(pdfs[:, j], 0.975) for j in 1:n_x]
-    return (; xs = collect(xs), dens_lo, dens_med, dens_hi)
-end
-
 # Build a draws_to_dist closure for the named delay component.
 # Returns (closure, S = number of posterior draws).
 function _draws_to_dist(chn, name::Symbol, family::Symbol)
@@ -92,10 +87,14 @@ function plot_ppc(chn, d, family::Symbol; seed = 20260519)
     rng = Random.MersenneTwister(seed)
 
     panels = [
-        (name = :dist_oa, label = _DELAY_LABELS.oa, obs = d.onset_to_admit,     xmax = 15.0),
-        (name = :dist_ad, label = _DELAY_LABELS.ad, obs = d.admit_to_death,     xmax = 30.0),
-        (name = :dist_ac, label = _DELAY_LABELS.ac, obs = d.admit_to_discharge, xmax = 30.0),
-        (name = :dist_on, label = _DELAY_LABELS.on, obs = d.onset_to_notif,     xmax = 90.0),
+        (name = :dist_oa, key = :oa, label = _DELAY_LABELS.oa,
+         obs = d.onset_to_admit,     xmax = 15.0),
+        (name = :dist_ad, key = :ad, label = _DELAY_LABELS.ad,
+         obs = d.admit_to_death,     xmax = 30.0),
+        (name = :dist_ac, key = :ac, label = _DELAY_LABELS.ac,
+         obs = d.admit_to_discharge, xmax = 30.0),
+        (name = :dist_on, key = :on, label = _DELAY_LABELS.on,
+         obs = d.onset_to_notif,     xmax = 90.0),
     ]
 
     fig = Figure(; size = (1000, 700))
@@ -127,6 +126,10 @@ function plot_ppc(chn, d, family::Symbol; seed = 20260519)
         lines!(ax, ppc.bin_centres[idx], ppc.ppc_med[idx];
                color = :firebrick, linewidth = 2, label = "posterior predictive")
 
+        vlines!(ax, [_ROSELLO_MEANS[p.key]];
+                color = :black, linestyle = :dash, linewidth = 1.5,
+                label = "Rosello 2015 mean")
+
         xlims!(ax, -0.5, p.xmax)
         if k == 1
             axislegend(ax; position = :rt)
@@ -149,10 +152,14 @@ function plot_family_comparison(chns_by_family, d; seed = 20260519)
     rng = Random.MersenneTwister(seed)
     families = collect(keys(chns_by_family))
     panels = [
-        (name = :dist_oa, label = _DELAY_LABELS.oa, obs = d.onset_to_admit,     xmax = 15.0),
-        (name = :dist_ad, label = _DELAY_LABELS.ad, obs = d.admit_to_death,     xmax = 30.0),
-        (name = :dist_ac, label = _DELAY_LABELS.ac, obs = d.admit_to_discharge, xmax = 30.0),
-        (name = :dist_on, label = _DELAY_LABELS.on, obs = d.onset_to_notif,     xmax = 90.0),
+        (name = :dist_oa, key = :oa, label = _DELAY_LABELS.oa,
+         obs = d.onset_to_admit,     xmax = 15.0),
+        (name = :dist_ad, key = :ad, label = _DELAY_LABELS.ad,
+         obs = d.admit_to_death,     xmax = 30.0),
+        (name = :dist_ac, key = :ac, label = _DELAY_LABELS.ac,
+         obs = d.admit_to_discharge, xmax = 30.0),
+        (name = :dist_on, key = :on, label = _DELAY_LABELS.on,
+         obs = d.onset_to_notif,     xmax = 90.0),
     ]
 
     fig = Figure(; size = (300 * length(families), 800))
@@ -188,6 +195,10 @@ function plot_family_comparison(chns_by_family, d; seed = 20260519)
                   color = (family_colour[fam], 0.25))
             lines!(ax, ppc.bin_centres[idx], ppc.ppc_med[idx];
                    color = family_colour[fam], linewidth = 2)
+
+            vlines!(ax, [_ROSELLO_MEANS[p.key]];
+                    color = :black, linestyle = :dash, linewidth = 1.5)
+
             xlims!(ax, -0.5, p.xmax)
         end
     end
