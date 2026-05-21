@@ -7,6 +7,8 @@ docs/Manifest.toml
 docs/node_modules/
 # Literate-generated walkthrough (regenerated from docs/examples/analysis.jl).
 docs/src/analysis.md
+# Home page copied from README.md by docs/make.jl.
+docs/src/index.md
 # Private working notes / draft (not for GitHub).
 docs/draft.md
 

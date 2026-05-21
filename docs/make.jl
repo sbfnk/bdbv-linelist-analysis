@@ -15,10 +15,18 @@ DocMeta.setdocmeta!(
     :(using BdbvLinelist); recursive = true
 )
 
-# Render the executable walkthrough through Literate so figures and
-# tables are generated at build time from a single source script.
+const REPO_ROOT    = dirname(@__DIR__)
 const LITERATE_SRC = joinpath(@__DIR__, "examples", "analysis.jl")
 const LITERATE_OUT = joinpath(@__DIR__, "src")
+
+# Use the README as the docs home page so the emoji-link navigation
+# (Analysis, Limitations, Model, …) is the first thing readers see on
+# both GitHub and the deployed site.
+write(joinpath(LITERATE_OUT, "index.md"),
+      read(joinpath(REPO_ROOT, "README.md"), String))
+
+# Render the executable walkthrough through Literate so figures and
+# tables are generated at build time from a single source script.
 Literate.markdown(LITERATE_SRC, LITERATE_OUT;
     name = "analysis",
     flavor = Literate.DocumenterFlavor(),

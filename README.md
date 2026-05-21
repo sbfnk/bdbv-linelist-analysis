@@ -11,11 +11,11 @@ line list — the 2012 Isiro outbreak in Haut-Uélé, DRC, as deposited by
 
 🌐 **[Analysis walkthrough](https://epiforecasts.io/bdbv-linelist-analysis/dev/analysis)** — full tables, figures, and diagnostics regenerated from the current model on every push to `main` (HTML)
 
+⚠️ **[Limitations](https://epiforecasts.io/bdbv-linelist-analysis/dev/limitations)** — read before using these estimates: data, model, inference, and generalisability caveats (HTML)
+
 📦 **[Posterior CSV and figures](https://github.com/epiforecasts/bdbv-linelist-analysis/releases/tag/main-latest)** — `main-latest` rolling release bundle
 
 📖 **[Model description](https://epiforecasts.io/bdbv-linelist-analysis/dev/model)** — priors, likelihood, inference (HTML)
-
-⚠️ **[Limitations](https://epiforecasts.io/bdbv-linelist-analysis/dev/limitations)** — known caveats around data, model, and generalisability (HTML)
 
 📑 **[API reference](https://epiforecasts.io/bdbv-linelist-analysis/dev/api)** — exported functions (HTML)
 
