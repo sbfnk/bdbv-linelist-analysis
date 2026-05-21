@@ -87,7 +87,10 @@ family_comparison = DataFrame(
 # Side-by-side posterior-predictive comparison across families. One
 # column per family, four rows (one per delay). The LogNormal
 # tail-over-fit on the onset → notification panel is what drives the
-# WAIC penalty.
+# WAIC penalty. The black dashed line in each panel marks the
+# Rosello *et al.* 2015 Table 5 mean for that delay (capped at 30
+# days in their fits) — the onset → notification gap is the most
+# visible consequence of that cap.
 
 chains_by_family = Dict(f => results[f].chain for f in families)
 plot_family_comparison(chains_by_family, d)
@@ -191,7 +194,9 @@ logit_coefficients = DataFrame(
 #
 # Four panels — one per atomic delay — overlaying the observed integer
 # day histogram with the simulated double-interval-censored posterior
-# predictive (median + 95% band).
+# predictive (median + 95% band). The dashed black line in each
+# panel marks the Rosello *et al.* 2015 Table 5 mean (4.00, 7.59,
+# 8.00, 8.83 d) for visual comparison.
 
 plot_ppc(chn_gamma, d, :gamma)
 
