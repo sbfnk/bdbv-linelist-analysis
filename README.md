@@ -60,4 +60,4 @@ Sebastian Funk (London School of Hygiene & Tropical Medicine).
 
 ## License
 
-MIT (see [LICENSE](LICENSE)).
+MIT (see [LICENSE](https://github.com/epiforecasts/bdbv-linelist-analysis/blob/main/LICENSE)).
