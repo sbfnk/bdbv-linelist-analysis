@@ -10,11 +10,14 @@ function headline_snippet(post, d)
     fmt(v) = let q = quantile(v, [0.025, 0.5, 0.975])
         @sprintf("%.2f (%.2f – %.2f)", q[2], q[1], q[3])
     end
+    # Note: separator cells must use **≥3** dash characters — Julia's
+    # Markdown.jl rejects 2-char alignment markers (`-:`, `:-`) and
+    # silently falls back to parsing the whole table as a paragraph.
     return """
-    Gamma fit (WAIC-selected, doubly censored), posterior median and mean with 95% credible intervals. Rosello's 2015 Table 5 means included for direct comparison.
+    All four delays fitted as **Gamma** (WAIC-selected, doubly censored). Posterior median and mean with 95% credible intervals, alongside the Rosello *et al.* 2015 Table 5 means for direct comparison (their fits, also Gamma, applied a 30-day cap on the raw delays).
 
-    | Delay                  |  n | Median, days (95% CrI) | Mean, days (95% CrI) | Rosello mean |
-    | ---                    | -: | ---                    | ---                  | -:           |
+    | Delay                  |  n   | Gamma median (95% CrI), days | Gamma mean (95% CrI), days | Rosello mean |
+    | :---                   | ---: | :---:                        | :---:                      | ---:         |
     | Onset → admission      | $(length(d.onset_to_admit))     | $(fmt(post.median_oa)) | $(fmt(post.mean_oa)) | 4.00 |
     | Admission → death      | $(length(d.admit_to_death))     | $(fmt(post.median_ad)) | $(fmt(post.mean_ad)) | 7.59 |
     | Admission → discharge  | $(length(d.admit_to_discharge)) | $(fmt(post.median_ac)) | $(fmt(post.mean_ac)) | 8.00 |

@@ -80,29 +80,35 @@ function fmt(x)
 end
 
 headline_estimates = DataFrame(
-    delay = [
+    "Delay" => [
         "Onset → admission",
         "Admission → death",
         "Admission → discharge",
         "Onset → notification",
     ],
-    n = [
+    "n" => [
         length(d.onset_to_admit),
         length(d.admit_to_death),
         length(d.admit_to_discharge),
         length(d.onset_to_notif),
     ],
-    median_days_95CrI = [fmt(post.median_oa), fmt(post.median_ad),
-                        fmt(post.median_ac), fmt(post.median_on)],
-    mean_days_95CrI   = [fmt(post.mean_oa),   fmt(post.mean_ad),
-                        fmt(post.mean_ac),    fmt(post.mean_on)],
-    rosello_mean      = [4.00, 7.59, 8.00, 8.83],
+    "Gamma median (95% CrI), days" =>
+        [fmt(post.median_oa), fmt(post.median_ad),
+         fmt(post.median_ac), fmt(post.median_on)],
+    "Gamma mean (95% CrI), days" =>
+        [fmt(post.mean_oa),   fmt(post.mean_ad),
+         fmt(post.mean_ac),   fmt(post.mean_on)],
+    "Rosello mean" => [4.00, 7.59, 8.00, 8.83],
 )
+
+# The same numbers are written to disk as a Markdown snippet so the docs
+# build can splice them into the home page — keeps the two views in sync.
 
 include(joinpath(pkgdir(BdbvLinelist), "docs", "examples", "_helpers.jl"))    #hide
 let snippet_path = joinpath(BdbvLinelist.OUTPUT_DIR, "cache", "headline.md")  #hide
     mkpath(dirname(snippet_path))                                             #hide
     write(snippet_path, headline_snippet(post, d))                            #hide
+    nothing                                                                   #hide
 end                                                                           #hide
 
 # ## Epidemic curve
