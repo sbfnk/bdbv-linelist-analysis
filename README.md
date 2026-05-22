@@ -19,6 +19,12 @@ line list — the 2012 Isiro outbreak in Haut-Uélé, DRC, as deposited by
 
 📑 **[API reference](https://epiforecasts.io/bdbv-linelist-analysis/dev/api)** — exported functions (HTML)
 
+## Headline estimates
+
+<!-- HEADLINE:START -->
+Live headline estimates (Gamma fit, four atomic delay components, with Rosello 2015 means side by side) are rendered on the [docs home page](https://epiforecasts.io/bdbv-linelist-analysis/dev) — regenerated from the current model on every push to `main`.
+<!-- HEADLINE:END -->
+
 ## Running
 
 ```bash

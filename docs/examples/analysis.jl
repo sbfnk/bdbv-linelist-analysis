@@ -47,18 +47,15 @@ d  = build_data(ll)
     first(8)
 end
 
-# ## Epidemic curve
+# ## Headline Gamma estimates
 #
-# Weekly onset counts with HCW subcounts stacked.
-
-plot_epi_curve(ll)
-
-# ## Family comparison
-#
-# Fit all three families and rank by WAIC.
-# Convergence (max R̂, min bulk ESS, divergent transitions) is checked
-# for each fit; the canonical Gamma fit is reused throughout the rest
-# of the walkthrough.
+# Fit all three families (Gamma wins on WAIC; comparison table and
+# plot are in the [Family comparison](#Family-comparison) section
+# below) and tabulate the four atomic delay components alongside
+# Rosello *et al.* 2015 Table 5 means. The Rosello fits applied a
+# 30-day cap on the underlying dates — this is binding on
+# onset → notification (where 9 of 38 cases exceed 30 d) and
+# accounts for most of the difference there.
 
 ## Suppress the package's stdout printing — we build clean DataFrame
 ## tables from the returned posterior vectors below.
@@ -67,8 +64,51 @@ results = redirect_stdout(devnull) do
 end
 nothing #hide
 
-# Build the comparison table from the returned `(chain, diag, waic)`
-# tuples. Lower WAIC is better; ΔWAIC is relative to the best family.
+chn_gamma = results[:gamma].chain
+post = redirect_stdout(devnull) do
+    summarise(chn_gamma, :gamma)
+end
+nothing #hide
+
+# Local helper: format a vector as `median (2.5% – 97.5%)`.
+
+qci(x) = (quantile(x, 0.025), quantile(x, 0.5), quantile(x, 0.975))
+
+function fmt(x)
+    lo, med, hi = qci(x)
+    return @sprintf("%.2f (%.2f – %.2f)", med, lo, hi)
+end
+
+headline_estimates = DataFrame(
+    delay = [
+        "Onset → admission",
+        "Admission → death",
+        "Admission → discharge",
+        "Onset → notification",
+    ],
+    n = [
+        length(d.onset_to_admit),
+        length(d.admit_to_death),
+        length(d.admit_to_discharge),
+        length(d.onset_to_notif),
+    ],
+    median_days_95CrI = [fmt(post.median_oa), fmt(post.median_ad),
+                        fmt(post.median_ac), fmt(post.median_on)],
+    mean_days_95CrI   = [fmt(post.mean_oa),   fmt(post.mean_ad),
+                        fmt(post.mean_ac),    fmt(post.mean_on)],
+    rosello_mean      = [4.00, 7.59, 8.00, 8.83],
+)
+
+# ## Epidemic curve
+#
+# Weekly onset counts with HCW subcounts stacked.
+
+plot_epi_curve(ll)
+
+# ## Family comparison
+#
+# WAIC ranking and convergence diagnostics for each fit.
+# Lower WAIC is better; ΔWAIC is relative to the best family.
 
 families = (:lognormal, :gamma, :weibull)
 waics = [results[f].waic.waic for f in families]
@@ -95,50 +135,7 @@ family_comparison = DataFrame(
 chains_by_family = Dict(f => results[f].chain for f in families)
 plot_family_comparison(chains_by_family, d)
 
-# ## Headline Gamma fit
-#
-# All remaining results use the canonical Gamma chain from the family
-# comparison.
-# `summarise(chn, :gamma)` returns a named tuple of per-draw vectors;
-# we build clean DataFrame tables from those vectors.
-
-chn_gamma = results[:gamma].chain
-post = redirect_stdout(devnull) do
-    summarise(chn_gamma, :gamma)
-end
-nothing #hide
-
-# Local helper: format a vector as `median (2.5% – 97.5%)`.
-
-qci(x) = (quantile(x, 0.025), quantile(x, 0.5), quantile(x, 0.975))
-
-function fmt(x)
-    lo, med, hi = qci(x)
-    return @sprintf("%.2f (%.2f – %.2f)", med, lo, hi)
-end
-
-# ### Fitted atomic delay components (Gamma, doubly censored)
-
-atomic_delays_table = DataFrame(
-    component = [
-        "Onset → admission",
-        "Admission → death",
-        "Admission → discharge",
-        "Onset → notification",
-    ],
-    n = [
-        length(d.onset_to_admit),
-        length(d.admit_to_death),
-        length(d.admit_to_discharge),
-        length(d.onset_to_notif),
-    ],
-    median = [fmt(post.median_oa), fmt(post.median_ad),
-              fmt(post.median_ac), fmt(post.median_on)],
-    mean   = [fmt(post.mean_oa),   fmt(post.mean_ad),
-              fmt(post.mean_ac),   fmt(post.mean_on)],
-)
-
-# ### Derived (convolved) marginals
+# ## Derived (convolved) marginals
 #
 # Onset → death = (Onset → admission) ⊛ (Admission → death);
 # Onset → discharge = (Onset → admission) ⊛ (Admission → discharge).
@@ -154,7 +151,7 @@ convolved_marginals = DataFrame(
     P95    = [fmt(post.od_p95),    fmt(post.oc_p95)],
 )
 
-# ### Stratified case-fatality
+# ## Stratified case-fatality
 
 cfr_table = DataFrame(
     stratum = [
@@ -190,7 +187,7 @@ logit_coefficients = DataFrame(
          ("Standardised age", post.β_age)]),
 )
 
-# ### Posterior predictive check (Gamma)
+# ## Posterior predictive check (Gamma)
 #
 # Four panels — one per atomic delay — overlaying the observed integer
 # day histogram with the simulated double-interval-censored posterior
