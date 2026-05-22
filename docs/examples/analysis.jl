@@ -99,11 +99,11 @@ headline_estimates = DataFrame(
     rosello_mean      = [4.00, 7.59, 8.00, 8.83],
 )
 
-include(joinpath(@__DIR__, "_helpers.jl"))                                 #hide
+include(joinpath(pkgdir(BdbvLinelist), "docs", "examples", "_helpers.jl"))    #hide
 let snippet_path = joinpath(BdbvLinelist.OUTPUT_DIR, "cache", "headline.md")  #hide
-    mkpath(dirname(snippet_path))                                          #hide
-    write(snippet_path, headline_snippet(post, d))                         #hide
-end                                                                        #hide
+    mkpath(dirname(snippet_path))                                             #hide
+    write(snippet_path, headline_snippet(post, d))                            #hide
+end                                                                           #hide
 
 # ## Epidemic curve
 #
