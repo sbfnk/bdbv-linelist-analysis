@@ -60,9 +60,17 @@
 
 - InitFromPrior works here. Per-case latent-time variants would need
   stricter initialisation.
-- AutoForwardDiff is used rather than Enzyme —
-  `CensoredDistributions`' integral-based likelihood is not yet
-  uniformly Enzyme-friendly. ForwardDiff is fast enough at this size.
+- `AutoForwardDiff` is the AD backend (see `sample_fit` in
+  `src/main.jl`). Forward-mode is competitive up to roughly 50
+  parameters, and this model is well within that regime: n = 52
+  cases and a low-dimensional parameter space (delay-distribution
+  parameters plus a small CFR block). ForwardDiff is fast enough at
+  this size and avoids the integral-based likelihoods in
+  `CensoredDistributions.jl` exercising reverse-mode paths that are
+  not yet uniformly supported. Switching to Mooncake would be the
+  obvious next step for larger reapplications of this code (e.g.
+  bigger outbreaks, richer hierarchical structure), contingent on
+  upstream reverse-mode support landing in `CensoredDistributions`.
 - Single seed (20260519). The convergence diagnostics are strong but
   a multi-seed run is a useful robustness check.
 
