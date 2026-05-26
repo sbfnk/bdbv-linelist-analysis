@@ -41,6 +41,32 @@
 # Bernoulli's domain check happy when η drifts during NUTS warmup.
 _logistic(x) = clamp(inv(1 + exp(-x)), 1e-10, 1.0 - 1e-10)
 
+# Compress a delay vector into the unique values and their integer
+# multiplicities. Used to weight the censored-likelihood contributions
+# in the marginalised models so each unique (lower, upper) pair only
+# needs one `logpdf` call per evaluation. At day-level censoring and
+# small N this collapses 38 observations down to ~10-15 unique values.
+function _unique_counts(v::AbstractVector)
+    counts = Dict{eltype(v), Int}()
+    for x in v
+        counts[x] = get(counts, x, 0) + 1
+    end
+    uniques = collect(keys(counts))
+    return uniques, [counts[u] for u in uniques]
+end
+
+# Weighted sum of `logpdf(dist, u)` over unique observations `uniques`
+# with integer multiplicities `counts`. Equivalent to summing
+# `logpdf(dist, x)` over the original (de-duplicated) observation
+# vector, but with one `logpdf` call per unique value.
+@inline function _weighted_loglik(dist, uniques::AbstractVector, counts::AbstractVector{Int})
+    s = zero(logpdf(dist, first(uniques)))
+    @inbounds for i in eachindex(uniques)
+        s += counts[i] * logpdf(dist, uniques[i])
+    end
+    return s
+end
+
 # Family singletons used for dispatch. The symbol-keyed public API
 # (`:lognormal`, `:gamma`, `:weibull`) is converted to one of these
 # at a single boundary, `delay_family`; everything internal dispatches
@@ -129,10 +155,19 @@ the atomic components.
     dic_ac = double_interval_censored(dist_ac; interval = 1.0)
     dic_on = double_interval_censored(dist_on; interval = 1.0)
 
-    d.onset_to_admit     ~ Turing.filldist(dic_oa, length(d.onset_to_admit))
-    d.admit_to_death     ~ Turing.filldist(dic_ad, length(d.admit_to_death))
-    d.admit_to_discharge ~ Turing.filldist(dic_ac, length(d.admit_to_discharge))
-    d.onset_to_notif     ~ Turing.filldist(dic_on, length(d.onset_to_notif))
+    # Day-level censoring means many cases share the same delay value;
+    # compress each observation vector into uniques + counts and weight
+    # the censored-likelihood contribution by the multiplicity. One
+    # `logpdf` call per unique value rather than per case (issue #4).
+    u_oa, c_oa = _unique_counts(d.onset_to_admit)
+    u_ad, c_ad = _unique_counts(d.admit_to_death)
+    u_ac, c_ac = _unique_counts(d.admit_to_discharge)
+    u_on, c_on = _unique_counts(d.onset_to_notif)
+
+    Turing.@addlogprob! _weighted_loglik(dic_oa, u_oa, c_oa)
+    Turing.@addlogprob! _weighted_loglik(dic_ad, u_ad, c_ad)
+    Turing.@addlogprob! _weighted_loglik(dic_ac, u_ac, c_ac)
+    Turing.@addlogprob! _weighted_loglik(dic_on, u_on, c_on)
 
     # CFR logistic regression coefficients: intercept, HCW indicator,
     # case-definition indicator (probable vs confirmed), and standardised age.
@@ -165,9 +200,10 @@ build the death-pathway mixture marginal.
     fam = delay_family(family)
     dist_cd ~ to_submodel(delay_prior(fam, log(8.0), 1.0, 1.0))
     if !isempty(delays)
-        delays ~ Turing.filldist(
-            double_interval_censored(dist_cd; interval = 1.0),
-            length(delays),
+        # Weighted-by-multiplicity likelihood — see `bdbv_model`.
+        u_cd, c_cd = _unique_counts(delays)
+        Turing.@addlogprob! _weighted_loglik(
+            double_interval_censored(dist_cd; interval = 1.0), u_cd, c_cd,
         )
     end
     # p_admit ~ Beta(1+n_admit, 1+n_comm); independent of the delay fit.
@@ -208,53 +244,61 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
     β_ac_hcw ~ Normal(0.0, 0.5)
     β_on_hcw ~ Normal(0.0, 0.5)
 
-    # Per-stratum likelihoods per delay. Field-name suffix convention:
-    # `_h` = HCW subset, `_n` = non-HCW subset (e.g. `d.ac_n` is the
-    # non-HCW admission→discharge delays). These subsets are pre-split
-    # fields of the data tuple so Turing treats them as observations
-    # rather than parameters.
+    # Per-stratum weighted-by-multiplicity likelihood per delay. Field-name
+    # suffix convention: `_h` = HCW subset, `_n` = non-HCW subset (e.g.
+    # `d.ac_n` is the non-HCW admission→discharge delays). These subsets
+    # are pre-split fields of the data tuple. Compression to uniques +
+    # counts uses the same pattern as `bdbv_model` (see issue #4).
     if !isempty(d.oa_h)
-        d.oa_h ~ Turing.filldist(double_interval_censored(
+        u, c = _unique_counts(d.oa_h)
+        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
             build_delay_dist(fam, log_mean_oa + β_oa_hcw, log_shape_oa);
-            interval = 1.0), length(d.oa_h))
+            interval = 1.0), u, c)
     end
     if !isempty(d.oa_n)
-        d.oa_n ~ Turing.filldist(double_interval_censored(
+        u, c = _unique_counts(d.oa_n)
+        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
             build_delay_dist(fam, log_mean_oa, log_shape_oa);
-            interval = 1.0), length(d.oa_n))
+            interval = 1.0), u, c)
     end
 
     if !isempty(d.ad_h)
-        d.ad_h ~ Turing.filldist(double_interval_censored(
+        u, c = _unique_counts(d.ad_h)
+        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
             build_delay_dist(fam, log_mean_ad + β_ad_hcw, log_shape_ad);
-            interval = 1.0), length(d.ad_h))
+            interval = 1.0), u, c)
     end
     if !isempty(d.ad_n)
-        d.ad_n ~ Turing.filldist(double_interval_censored(
+        u, c = _unique_counts(d.ad_n)
+        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
             build_delay_dist(fam, log_mean_ad, log_shape_ad);
-            interval = 1.0), length(d.ad_n))
+            interval = 1.0), u, c)
     end
 
     if !isempty(d.ac_h)
-        d.ac_h ~ Turing.filldist(double_interval_censored(
+        u, c = _unique_counts(d.ac_h)
+        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
             build_delay_dist(fam, log_mean_ac + β_ac_hcw, log_shape_ac);
-            interval = 1.0), length(d.ac_h))
+            interval = 1.0), u, c)
     end
     if !isempty(d.ac_n)
-        d.ac_n ~ Turing.filldist(double_interval_censored(
+        u, c = _unique_counts(d.ac_n)
+        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
             build_delay_dist(fam, log_mean_ac, log_shape_ac);
-            interval = 1.0), length(d.ac_n))
+            interval = 1.0), u, c)
     end
 
     if !isempty(d.on_h)
-        d.on_h ~ Turing.filldist(double_interval_censored(
+        u, c = _unique_counts(d.on_h)
+        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
             build_delay_dist(fam, log_mean_on + β_on_hcw, log_shape_on);
-            interval = 1.0), length(d.on_h))
+            interval = 1.0), u, c)
     end
     if !isempty(d.on_n)
-        d.on_n ~ Turing.filldist(double_interval_censored(
+        u, c = _unique_counts(d.on_n)
+        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
             build_delay_dist(fam, log_mean_on, log_shape_on);
-            interval = 1.0), length(d.on_n))
+            interval = 1.0), u, c)
     end
 
     # CFR block — same as the unstratified model.
