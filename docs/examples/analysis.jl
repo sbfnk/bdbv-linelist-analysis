@@ -52,10 +52,10 @@ end
 # Fit all three families (Gamma wins on WAIC; comparison table and
 # plot are in the [Family comparison](#Family-comparison) section
 # below) and tabulate the four atomic delay components alongside
-# Rosello *et al.* 2015 Table 5 means. The Rosello fits applied a
-# 30-day cap on the underlying dates — this is binding on
-# onset → notification (where 9 of 38 cases exceed 30 d) and
-# accounts for most of the difference there.
+# Rosello *et al.* 2015 Table 5 empirical means. Rosello capped the
+# raw delays at 30 days before computing those summary statistics —
+# this is binding on onset → notification (where 9 of 38 cases
+# exceed 30 d) and accounts for most of the difference there.
 
 ## Suppress the package's stdout printing — we build clean DataFrame
 ## tables from the returned posterior vectors below.
@@ -140,9 +140,9 @@ family_comparison = DataFrame(
 # column per family, four rows (one per delay). The LogNormal
 # tail-over-fit on the onset → notification panel is what drives the
 # WAIC penalty. The black dashed line in each panel marks the
-# Rosello *et al.* 2015 Table 5 mean for that delay (capped at 30
-# days in their fits) — the onset → notification gap is the most
-# visible consequence of that cap.
+# Rosello *et al.* 2015 Table 5 empirical mean for that delay
+# (computed after capping the raw delays at 30 days) — the
+# onset → notification gap is the most visible consequence of that cap.
 
 chains_by_family = Dict(f => results[f].chain for f in families)
 plot_family_comparison(chains_by_family, d)

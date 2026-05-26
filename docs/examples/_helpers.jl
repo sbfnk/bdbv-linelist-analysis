@@ -14,7 +14,7 @@ function headline_snippet(post, d)
     # Markdown.jl rejects 2-char alignment markers (`-:`, `:-`) and
     # silently falls back to parsing the whole table as a paragraph.
     return """
-    All four delays fitted as **Gamma** (WAIC-selected, doubly censored). Posterior median and mean with 95% credible intervals, alongside the Rosello *et al.* 2015 Table 5 mean (SD) for direct comparison (their fits, also Gamma, applied a 30-day cap on the raw delays).
+    All four delays fitted as **Gamma** (WAIC-selected, doubly censored). Posterior median and mean with 95% credible intervals, alongside the Rosello *et al.* 2015 Table 5 mean (SD) for direct comparison — empirical summary statistics of the same data after their 30-day cap on the raw delays.
 
     | Delay                  |  n   | Gamma median (95% CrI), days | Gamma mean (95% CrI), days | Rosello mean (SD) |
     | :---                   | ---: | :---:                        | :---:                      | ---:              |
