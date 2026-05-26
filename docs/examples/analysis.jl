@@ -170,7 +170,7 @@ convolved_marginals = DataFrame(
 # tendency.
 
 gamma_parameters = DataFrame(
-    delay = [
+    "delay" => [
         "Onset → admission",
         "Admission → death",
         "Admission → discharge",
