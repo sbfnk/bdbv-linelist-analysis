@@ -58,17 +58,38 @@ end
 # exceed 30 d) and accounts for most of the difference there.
 
 ## Suppress the package's stdout printing — we build clean DataFrame
-## tables from the returned posterior vectors below.
+## tables from the returned posterior vectors below. The fit itself
+## emits a fair amount of Turing diagnostics (initial step size,
+## sampling progress, the occasional divergent-transition warning)
+## that aren't part of the narrative, so the call and its captured
+## output are tucked into the dropdown below.
+
+#md # ```@raw html
+#md # <details><summary>Fit: <code>compare_families()</code> — Turing diagnostics</summary>
+#md # ```
+
 results = redirect_stdout(devnull) do
     compare_families()
 end
 nothing #hide
+
+#md # ```@raw html
+#md # </details>
+#md # ```
+
+#md # ```@raw html
+#md # <details><summary>Post-processing: <code>summarise()</code> on the Gamma fit</summary>
+#md # ```
 
 chn_gamma = results[:gamma].chain
 post = redirect_stdout(devnull) do
     summarise(chn_gamma, :gamma)
 end
 nothing #hide
+
+#md # ```@raw html
+#md # </details>
+#md # ```
 
 # Local helper: format a vector as `median (2.5% – 97.5%)`.
 
@@ -241,10 +262,18 @@ plot_ppc(chn_gamma, d, :gamma)
 # tendency of each delay; a 4× span across the sweep shifts posterior
 # means by < 5%.
 
+#md # ```@raw html
+#md # <details><summary>Fit: <code>sensitivity()</code> — three prior-scale refits</summary>
+#md # ```
+
 sens = redirect_stdout(devnull) do
     sensitivity()
 end
 nothing #hide
+
+#md # ```@raw html
+#md # </details>
+#md # ```
 
 # Pull the per-draw posterior mean for each atomic delay out of each
 # sensitivity chain. The Gamma submodel parametrises each delay as
