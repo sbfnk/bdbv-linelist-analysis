@@ -138,6 +138,55 @@ end                                                                           #h
 
 plot_epi_curve(ll)
 
+# ## Early-phase growth rate
+#
+# An exploratory exponential-growth fit to the rising phase of the
+# weekly onset curve — week 1 (2012-05-28) through the peak week
+# (2012-09-10), inclusive. The model is a Poisson regression
+# `log(λ_t) = α + r·t` with weakly-informative `Normal(0, 5)` and
+# `Normal(0, 1)` priors on `α` and `r_week`. Intended as a prior
+# source for downstream re-applications (e.g. the outbreak-size work
+# in `epiforecasts/BVDOutbreakSize`) rather than as a primary
+# headline of this analysis. The CrI on `r` covers zero — Isiro was
+# a slow, noisy rise — so use the posterior as a weakly-informative
+# prior, not a tight constraint.
+
+growth = redirect_stdout(devnull) do
+    fit_growth_rate(ll)
+end
+nothing #hide
+
+# Doubling time `log(2)/r` is reported as a median only; its
+# distribution is heavy-tailed because the posterior on `r` includes
+# values close to zero. The credibility statement worth quoting is
+# the CrI on `r` itself.
+
+growth_estimates = DataFrame(
+    "Quantity" => [
+        "Growth rate r (per week)",
+        "Growth rate r (per day)",
+        "Doubling time (days, median)",
+        "P(r > 0)",
+    ],
+    "Posterior summary" => [
+        fmt(growth.r_week),
+        fmt(growth.r_day),
+        @sprintf("%.1f", quantile(growth.doubling_time, 0.5)),
+        @sprintf("%.2f", mean(growth.r_day .> 0)),
+    ],
+)
+
+# **Recommended downstream prior on `r` (per day):**
+# `Normal(mean(r_day), sd(r_day))` from the posterior above. A
+# single-line summary intended for `epiforecasts/BVDOutbreakSize`
+# and any other downstream model that needs an Isiro-anchored growth
+# prior. See [Limitations](limitations.md#downstream-priors) for
+# caveats.
+
+prior_summary = @sprintf("Normal(%.4f, %.4f)",
+                         mean(growth.r_day),
+                         std(growth.r_day))
+
 # ## Family comparison
 #
 # WAIC ranking and convergence diagnostics for each fit.

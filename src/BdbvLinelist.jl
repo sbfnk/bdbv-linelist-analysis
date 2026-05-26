@@ -8,7 +8,7 @@ using DataFramesMeta: @select, @transform, @subset, @combine, @by, @rtransform,
                       @rsubset, @orderby, @rename
 using Dates: Dates, Date, Day
 using Distributions: Normal, LogNormal, Gamma, Weibull, Bernoulli, Beta,
-                     Uniform, truncated, logpdf, cdf
+                     Poisson, Uniform, truncated, logpdf, cdf
 using SpecialFunctions: SpecialFunctions
 using CensoredDistributions: double_interval_censored
 using Makie: Figure, Axis, Relative, barplot!, lines!, band!, vlines!,
@@ -29,7 +29,7 @@ include("postprocess.jl")
 include("plots.jl")
 include("main.jl")
 
-export load_linelist, build_data, atomic_delays
+export load_linelist, build_data, atomic_delays, fit_growth_rate
 export bdbv_model, bdbv_model_stratified, community_death_model
 export DelayFamily, LogNormalDelay, GammaDelay, WeibullDelay,
        delay_family, family_symbol, delay_prior, build_delay_dist
