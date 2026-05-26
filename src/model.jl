@@ -41,6 +41,48 @@
 # Bernoulli's domain check happy when η drifts during NUTS warmup.
 _logistic(x) = clamp(inv(1 + exp(-x)), 1e-10, 1.0 - 1e-10)
 
+# Compress a delay vector into the unique values and their integer
+# multiplicities. Used to weight the censored-likelihood contributions
+# in the marginalised models so each unique (lower, upper) pair only
+# needs one `logpdf` call per evaluation. At day-level censoring and
+# small N this collapses 38 observations down to ~10-15 unique values.
+function _unique_counts(v::AbstractVector)
+    counts = Dict{eltype(v), Int}()
+    for x in v
+        counts[x] = get(counts, x, 0) + 1
+    end
+    uniques = collect(keys(counts))
+    return uniques, [counts[u] for u in uniques]
+end
+
+# Weighted sum of `logpdf(dist, u)` over unique observations `uniques`
+# with integer multiplicities `counts`. Equivalent to summing
+# `logpdf(dist, x)` over the original (de-duplicated) observation
+# vector, but with one `logpdf` call per unique value.
+@inline function _weighted_loglik(dist, uniques::AbstractVector, counts::AbstractVector{Int})
+    s = zero(logpdf(dist, first(uniques)))
+    @inbounds for i in eachindex(uniques)
+        s += counts[i] * logpdf(dist, uniques[i])
+    end
+    return s
+end
+
+# One stratum × delay-component weighted log-likelihood. Builds the
+# doubly-censored distribution from the family + log-mean (which the
+# caller may have shifted by the HCW β) + log-shape, then sums
+# count-weighted `logpdf` over the unique values in `obs`. Returns
+# zero (typed to the param-promoted Real) when `obs` is empty so the
+# caller can pass it through `@addlogprob!` unconditionally.
+@inline function _stratum_loglik(fam, log_mean, log_shape, obs)
+    isempty(obs) && return zero(log_mean + log_shape)
+    u, c = _unique_counts(obs)
+    return _weighted_loglik(
+        double_interval_censored(
+            build_delay_dist(fam, log_mean, log_shape);
+            interval = 1.0),
+        u, c)
+end
+
 # Family singletons used for dispatch. The symbol-keyed public API
 # (`:lognormal`, `:gamma`, `:weibull`) is converted to one of these
 # at a single boundary, `delay_family`; everything internal dispatches
@@ -129,10 +171,19 @@ the atomic components.
     dic_ac = double_interval_censored(dist_ac; interval = 1.0)
     dic_on = double_interval_censored(dist_on; interval = 1.0)
 
-    d.onset_to_admit     ~ Turing.filldist(dic_oa, length(d.onset_to_admit))
-    d.admit_to_death     ~ Turing.filldist(dic_ad, length(d.admit_to_death))
-    d.admit_to_discharge ~ Turing.filldist(dic_ac, length(d.admit_to_discharge))
-    d.onset_to_notif     ~ Turing.filldist(dic_on, length(d.onset_to_notif))
+    # Day-level censoring means many cases share the same delay value;
+    # compress each observation vector into uniques + counts and weight
+    # the censored-likelihood contribution by the multiplicity. One
+    # `logpdf` call per unique value rather than per case (issue #4).
+    u_oa, c_oa = _unique_counts(d.onset_to_admit)
+    u_ad, c_ad = _unique_counts(d.admit_to_death)
+    u_ac, c_ac = _unique_counts(d.admit_to_discharge)
+    u_on, c_on = _unique_counts(d.onset_to_notif)
+
+    Turing.@addlogprob! _weighted_loglik(dic_oa, u_oa, c_oa)
+    Turing.@addlogprob! _weighted_loglik(dic_ad, u_ad, c_ad)
+    Turing.@addlogprob! _weighted_loglik(dic_ac, u_ac, c_ac)
+    Turing.@addlogprob! _weighted_loglik(dic_on, u_on, c_on)
 
     # CFR logistic regression coefficients: intercept, HCW indicator,
     # case-definition indicator (probable vs confirmed), and standardised age.
@@ -165,9 +216,10 @@ build the death-pathway mixture marginal.
     fam = delay_family(family)
     dist_cd ~ to_submodel(delay_prior(fam, log(8.0), 1.0, 1.0))
     if !isempty(delays)
-        delays ~ Turing.filldist(
-            double_interval_censored(dist_cd; interval = 1.0),
-            length(delays),
+        # Weighted-by-multiplicity likelihood — see `bdbv_model`.
+        u_cd, c_cd = _unique_counts(delays)
+        Turing.@addlogprob! _weighted_loglik(
+            double_interval_censored(dist_cd; interval = 1.0), u_cd, c_cd,
         )
     end
     # p_admit ~ Beta(1+n_admit, 1+n_comm); independent of the delay fit.
@@ -219,24 +271,20 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
     β_ac_hcw ~ Normal(0.0, 0.5)
     β_on_hcw ~ Normal(0.0, 0.5)
 
-    # Per-stratum likelihoods per delay. Field-name suffix convention:
-    # `_h` = HCW subset, `_n` = non-HCW subset (e.g. `d.ac_n` is the
-    # non-HCW admission→discharge delays). These subsets are pre-split
-    # fields of the data tuple so Turing treats them as observations
-    # rather than parameters.
-    #
-    # `_stratum_dist` builds the doubly-censored filldist for one
-    # stratum × delay component; the eight `~` lines below differ
-    # only in which field they observe and whether the HCW shift is
-    # added to the log-mean.
-    if !isempty(d.oa_h); d.oa_h ~ _stratum_dist(fam, log_mean_oa + β_oa_hcw, log_shape_oa, d.oa_h); end
-    if !isempty(d.oa_n); d.oa_n ~ _stratum_dist(fam, log_mean_oa,            log_shape_oa, d.oa_n); end
-    if !isempty(d.ad_h); d.ad_h ~ _stratum_dist(fam, log_mean_ad + β_ad_hcw, log_shape_ad, d.ad_h); end
-    if !isempty(d.ad_n); d.ad_n ~ _stratum_dist(fam, log_mean_ad,            log_shape_ad, d.ad_n); end
-    if !isempty(d.ac_h); d.ac_h ~ _stratum_dist(fam, log_mean_ac + β_ac_hcw, log_shape_ac, d.ac_h); end
-    if !isempty(d.ac_n); d.ac_n ~ _stratum_dist(fam, log_mean_ac,            log_shape_ac, d.ac_n); end
-    if !isempty(d.on_h); d.on_h ~ _stratum_dist(fam, log_mean_on + β_on_hcw, log_shape_on, d.on_h); end
-    if !isempty(d.on_n); d.on_n ~ _stratum_dist(fam, log_mean_on,            log_shape_on, d.on_n); end
+    # Per-stratum weighted-by-multiplicity likelihood per delay.
+    # Field-name suffix convention: `_h` = HCW subset, `_n` = non-HCW
+    # subset. `_stratum_loglik` handles the empty-subset case, applies
+    # the HCW shift (when given) to the log-mean, builds the
+    # doubly-censored distribution via `build_delay_dist`, and weights
+    # the per-unique-value `logpdf` calls by multiplicity (issue #4).
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_oa + β_oa_hcw, log_shape_oa, d.oa_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_oa,            log_shape_oa, d.oa_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ad + β_ad_hcw, log_shape_ad, d.ad_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ad,            log_shape_ad, d.ad_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ac + β_ac_hcw, log_shape_ac, d.ac_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ac,            log_shape_ac, d.ac_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_on + β_on_hcw, log_shape_on, d.on_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_on,            log_shape_on, d.on_n)
 
     # CFR block — same as the unstratified model.
     β_0   ~ Normal(0.0, 2.0)
