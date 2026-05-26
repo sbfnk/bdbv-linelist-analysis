@@ -141,57 +141,82 @@ trick is from Sam Abbott.
     dist_ac ~ to_submodel(delay_prior(fam, log(13.0), prior_scale, prior_scale))
     dist_on ~ to_submodel(delay_prior(fam, log(7.0),  prior_scale, prior_scale))
 
-    N = length(d.case_events)
-    T_onset = Vector{Real}(undef, N)
-    T_admit = Vector{Real}(undef, N)
-    T_death = Vector{Real}(undef, N)
-    T_disch = Vector{Real}(undef, N)
-    T_notif = Vector{Real}(undef, N)
+    # Vectorised latent sampling — each event type is one `arraydist`
+    # over the cases that observe it, so the underlying storage is a
+    # concrete-eltype Vector (fast under ForwardDiff) rather than the
+    # abstract `Vector{Real}` a per-case loop would need to hold both
+    # `Float64` and `Dual`.
+    cases = d.case_events
+    death_idx = findall(c -> !ismissing(c.death), cases)
+    disch_idx = findall(c -> !ismissing(c.disch), cases)
+    notif_idx = findall(c -> !ismissing(c.notif), cases)
+    admit_idx = findall(c -> !ismissing(c.admit), cases)
+    onset_idx = findall(c -> !ismissing(c.onset), cases)
 
-    for i in 1:N
-        c = d.case_events[i]
-        has_onset = !ismissing(c.onset)
-        has_admit = !ismissing(c.admit)
-        has_death = !ismissing(c.death)
-        has_disch = !ismissing(c.disch)
-        has_notif = !ismissing(c.notif)
+    # Leaf events (no upper bound from chain ordering).
+    T_death ~ Turing.arraydist([Uniform(cases[i].death, cases[i].death + 1.0)
+                                for i in death_idx])
+    T_disch ~ Turing.arraydist([Uniform(cases[i].disch, cases[i].disch + 1.0)
+                                for i in disch_idx])
+    T_notif ~ Turing.arraydist([Uniform(cases[i].notif, cases[i].notif + 1.0)
+                                for i in notif_idx])
 
-        if has_death
-            T_death[i] ~ Uniform(c.death, c.death + 1.0)
-        end
-        if has_disch
-            T_disch[i] ~ Uniform(c.disch, c.disch + 1.0)
-        end
-        if has_admit
-            upper = c.admit + 1.0
-            has_death && (upper = min(upper, T_death[i]))
-            has_disch && (upper = min(upper, T_disch[i]))
-            T_admit[i] ~ Uniform(c.admit, upper)
-            # Jacobian to match independent-uniform priors over each
-            # event's day window (the marginalised model's implicit
-            # prior). Vanishes for multi-day cases (`upper - c.admit = 1`).
-            Turing.@addlogprob!(log(upper - c.admit))
-        end
-        if has_notif
-            T_notif[i] ~ Uniform(c.notif, c.notif + 1.0)
-        end
-        if has_onset
-            upper = c.onset + 1.0
-            has_admit && (upper = min(upper, T_admit[i]))
-            has_notif && (upper = min(upper, T_notif[i]))
-            T_onset[i] ~ Uniform(c.onset, upper)
-            Turing.@addlogprob!(log(upper - c.onset))
-        end
+    # Per-case lookup of leaf samples (case index → sampled time).
+    T_death_at = Dict(death_idx .=> T_death)
+    T_disch_at = Dict(disch_idx .=> T_disch)
+    T_notif_at = Dict(notif_idx .=> T_notif)
 
-        has_onset && has_admit &&
-            Turing.@addlogprob!(logpdf(dist_oa, T_admit[i] - T_onset[i]))
-        has_admit && has_death &&
-            Turing.@addlogprob!(logpdf(dist_ad, T_death[i] - T_admit[i]))
-        has_admit && has_disch &&
-            Turing.@addlogprob!(logpdf(dist_ac, T_disch[i] - T_admit[i]))
-        has_onset && has_notif &&
-            Turing.@addlogprob!(logpdf(dist_on, T_notif[i] - T_onset[i]))
-    end
+    # T_admit's upper bound is shrunk by the secondary event time when
+    # the case also has a recorded death and/or discharge (Sam Abbott's
+    # bounded-primary trick — see docstring).
+    admit_uppers = [let c = cases[i]
+        u = c.admit + 1.0
+        haskey(T_death_at, i) && (u = min(u, T_death_at[i]))
+        haskey(T_disch_at, i) && (u = min(u, T_disch_at[i]))
+        u
+    end for i in admit_idx]
+    T_admit ~ Turing.arraydist([Uniform(cases[admit_idx[k]].admit, admit_uppers[k])
+                                for k in eachindex(admit_idx)])
+    # Jacobian to match the marginalised model's implicit
+    # independent-uniform-over-day-window prior. Vanishes
+    # (`log(1) = 0`) on the multi-day cases where the ordering
+    # constraint doesn't bind.
+    Turing.@addlogprob!(sum(log(admit_uppers[k] - cases[admit_idx[k]].admit)
+                            for k in eachindex(admit_idx); init = 0.0))
+
+    T_admit_at = Dict(admit_idx .=> T_admit)
+
+    onset_uppers = [let c = cases[i]
+        u = c.onset + 1.0
+        haskey(T_admit_at, i) && (u = min(u, T_admit_at[i]))
+        haskey(T_notif_at, i) && (u = min(u, T_notif_at[i]))
+        u
+    end for i in onset_idx]
+    T_onset ~ Turing.arraydist([Uniform(cases[onset_idx[k]].onset, onset_uppers[k])
+                                for k in eachindex(onset_idx)])
+    Turing.@addlogprob!(sum(log(onset_uppers[k] - cases[onset_idx[k]].onset)
+                            for k in eachindex(onset_idx); init = 0.0))
+
+    T_onset_at = Dict(onset_idx .=> T_onset)
+
+    # Delay likelihoods: one term per ordered pair both observed in
+    # the case, using the shared per-case latents.
+    Turing.@addlogprob!(sum(
+        logpdf(dist_oa, T_admit[k] - T_onset_at[admit_idx[k]])
+        for k in eachindex(admit_idx) if haskey(T_onset_at, admit_idx[k]);
+        init = 0.0))
+    Turing.@addlogprob!(sum(
+        logpdf(dist_ad, T_death[k] - T_admit_at[death_idx[k]])
+        for k in eachindex(death_idx) if haskey(T_admit_at, death_idx[k]);
+        init = 0.0))
+    Turing.@addlogprob!(sum(
+        logpdf(dist_ac, T_disch[k] - T_admit_at[disch_idx[k]])
+        for k in eachindex(disch_idx) if haskey(T_admit_at, disch_idx[k]);
+        init = 0.0))
+    Turing.@addlogprob!(sum(
+        logpdf(dist_on, T_notif[k] - T_onset_at[notif_idx[k]])
+        for k in eachindex(notif_idx) if haskey(T_onset_at, notif_idx[k]);
+        init = 0.0))
 
     # CFR logistic regression: intercept, HCW indicator, case-definition
     # indicator (probable vs confirmed), and standardised age.
