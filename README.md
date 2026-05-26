@@ -69,7 +69,7 @@ days) is similarly dropped. No other modifications.
 
 ## Authors
 
-Sebastian Funk (London School of Hygiene & Tropical Medicine).
+Sebastian Funk and Sam Abbott (London School of Hygiene & Tropical Medicine).
 
 ## License
 
