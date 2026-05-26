@@ -15,6 +15,8 @@
 # Priors, the doubly-censored likelihood, and post-processing are
 # detailed on the [Model](model.md) page.
 # Caveats are on the [Limitations](limitations.md) page.
+# Per-draw posterior CSV and figure bundle from this build is in the
+# rolling [`main-latest` release](https://github.com/epiforecasts/bdbv-linelist-analysis/releases/tag/main-latest).
 
 using BdbvLinelist
 using DataFrames
