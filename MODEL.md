@@ -139,8 +139,8 @@ come from per-draw `quantile(dist, 0.5)`.
 
 For each derived marginal (`d_od = d_oa ⊛ d_ad`,
 `d_oc = d_oa ⊛ d_ac`) the script samples 500 realisations per
-posterior draw from the convolution and reports median, mean, and
-95th percentile with 95% CrI across draws.
+posterior draw from the convolution and reports median, mean, SD,
+and 95th percentile with 95% CrI across draws.
 
 For the CFR block the script reports the log-OR coefficients and the
 implied marginal CFR at each combination of HCW status and case

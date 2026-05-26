@@ -75,6 +75,77 @@ was rural, mining-influenced, with MSF ETC support. The 2026 Ituri
 outbreak has urban (Bunia) and conflict-zone components that may
 push delays longer.
 
+## Charniga checklist compliance
+
+Self-audit against the [Charniga *et al.* 2024](https://doi.org/10.1371/journal.pcbi.1012520)
+reporting checklist (Tables 2 and 3). Items grouped by status; the
+checklist *table* itself is issue #2.
+
+**Estimation:**
+
+- Double interval censoring — `double_interval_censored(...; interval = 1.0)`
+  on all four atomic delays.
+- Right truncation — *not applied; not applicable.* The 2012 Isiro
+  outbreak ended over a decade before fitting; the deposit is a
+  retrospective, complete-outbreak line list.
+- Dynamical bias — *not applied; not applicable* for the same reason.
+- Multiple distributions fitted — LogNormal, Gamma, Weibull compared
+  via WAIC. Gamma wins; reported as canonical.
+- Distributions visualised — per-family posterior predictive panels
+  and a family-comparison figure in the analysis walkthrough.
+- Parameter conversion — mean, SD, shape, scale reported per draw and
+  summarised with 95% CrI for each atomic delay.
+- Stratified estimates — CFR is stratified by HCW status, case
+  definition, and standardised age. A `bdbv_model_stratified`
+  HCW-stratified delay model exists in the package but is not surfaced
+  in the walkthrough (the n = 52 sample size keeps the HCW × delay
+  estimates very wide; treated as a follow-up).
+- Model diagnostics — R̂, bulk ESS, and divergent transition counts
+  reported for every family in the comparison table.
+
+**Reporting:**
+
+- Variability — SD reported alongside mean and median for atomic and
+  convolved marginals, with 95% CrI throughout.
+- Quantiles and distribution parameters — median, mean, SD, shape and
+  scale for each atomic delay; median, mean, SD and 95th percentile
+  for the convolved marginals.
+- Credible intervals — 95% CrI throughout.
+- Contextual information — sample size, observation window,
+  age/sex/HCW breakdown, case-definition mix and outcome counts in the
+  walkthrough's "Outbreak context" block; epidemic curve adjacent; ETC
+  and outbreak setting in the [Generalisability](#generalisability)
+  section.
+- Code and data — full source on
+  [GitHub](https://github.com/epiforecasts/bdbv-linelist-analysis);
+  data CSV bundled; outputs published as the `main-latest` rolling
+  release; Zenodo metadata in `.zenodo.json`.
+- Posterior samples — `output/posterior_<family>.csv` exposes
+  per-draw mean, median, SD, shape and scale for each atomic delay and
+  the convolved marginals; the raw MCMC chain is not serialised by
+  default (downstream users typically only need the per-draw
+  parameters; the CSV is the canonical deliverable).
+
+**Incubation period / serial interval (Charniga Table 3):**
+
+- Incubation period, serial interval and generation interval — not
+  fitted. No exposure dates and no transmission pairs in the deposit
+  (see [Data](#data) above). Items on multiple exposures, transmission
+  pair confirmation, transmission direction and negative-interval
+  distributions are all not applicable for the same reason.
+
+**Other recommendations:**
+
+- Time-varying delays — not implemented. n = 52 is too small for a
+  pre-/post-ETC cohort split on the forward delays. The death-pathway
+  mixture in `fit_death_mixture` partially addresses this for the
+  onset → death marginal.
+- Priors — weakly informative Normal priors on log-mean / log-shape;
+  three-point sensitivity sweep (`prior_scale ∈ {0.5, 1.0, 2.0}`).
+- Pooled vs meta-analysis — individual-level reanalysis of the
+  original line list rather than a meta-analysis, so the meta-analysis
+  sensitivity item is not applicable.
+
 ## Out of scope
 
 - Whether the HCW protective effect is causal (faster access to care)
