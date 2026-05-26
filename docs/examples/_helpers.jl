@@ -14,15 +14,15 @@ function headline_snippet(post, d)
     # Markdown.jl rejects 2-char alignment markers (`-:`, `:-`) and
     # silently falls back to parsing the whole table as a paragraph.
     return """
-    All four delays fitted as **Gamma** (WAIC-selected, doubly censored). Posterior median and mean with 95% credible intervals, alongside the Rosello *et al.* 2015 Table 5 means for direct comparison (their fits, also Gamma, applied a 30-day cap on the raw delays).
+    All four delays fitted as **Gamma** (WAIC-selected, doubly censored). Posterior median and mean with 95% credible intervals, alongside the Rosello *et al.* 2015 Table 5 mean (SD) for direct comparison — empirical summary statistics of the same data after their 30-day cap on the raw delays.
 
-    | Delay                  |  n   | Gamma median (95% CrI), days | Gamma mean (95% CrI), days | Rosello mean |
-    | :---                   | ---: | :---:                        | :---:                      | ---:         |
-    | Onset → admission      | $(length(d.onset_to_admit))     | $(fmt(post.median_oa)) | $(fmt(post.mean_oa)) | 4.00 |
-    | Admission → death      | $(length(d.admit_to_death))     | $(fmt(post.median_ad)) | $(fmt(post.mean_ad)) | 7.59 |
-    | Admission → discharge  | $(length(d.admit_to_discharge)) | $(fmt(post.median_ac)) | $(fmt(post.mean_ac)) | 8.00 |
-    | Onset → notification   | $(length(d.onset_to_notif))     | $(fmt(post.median_on)) | $(fmt(post.mean_on)) | 8.83 |
+    | Delay                  |  n   | Gamma median (95% CrI), days | Gamma mean (95% CrI), days | Rosello mean (SD) |
+    | :---                   | ---: | :---:                        | :---:                      | ---:              |
+    | Onset → admission      | $(length(d.onset_to_admit))     | $(fmt(post.median_oa)) | $(fmt(post.mean_oa)) | 4.00 (3.27) |
+    | Admission → death      | $(length(d.admit_to_death))     | $(fmt(post.median_ad)) | $(fmt(post.mean_ad)) | 7.59 (5.52) |
+    | Admission → discharge  | $(length(d.admit_to_discharge)) | $(fmt(post.median_ac)) | $(fmt(post.mean_ac)) | 8.00 (6.56) |
+    | Onset → notification   | $(length(d.onset_to_notif))     | $(fmt(post.median_on)) | $(fmt(post.mean_on)) | 8.83 (8.29) |
 
-    Rosello's onset → notification fit applied a 30-day cap; without it our posterior mean runs roughly twice as long. See the [analysis walkthrough](https://epiforecasts.io/bdbv-linelist-analysis/dev/analysis) for the full Gamma summary, posterior predictive checks and convolved marginals.
+    Rosello's onset → notification fit applied a 30-day cap; without it our posterior mean runs roughly twice as long. See the [analysis walkthrough](https://epiforecasts.io/bdbv-linelist-analysis/dev/analysis) for the full Gamma summary, posterior predictive checks and convolved marginals. Per-draw shape, scale and SD for each atomic delay are in `posterior_gamma.csv` of the [`main-latest` release](https://github.com/epiforecasts/bdbv-linelist-analysis/releases/tag/main-latest).
     """
 end
