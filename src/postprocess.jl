@@ -126,15 +126,17 @@ function _convolve_delays(rng, family::Symbol, p_a, p_b; n_per_draw = 500)
     K = length(p_a.mean)
     means   = Vector{Float64}(undef, K)
     medians = Vector{Float64}(undef, K)
+    sds     = Vector{Float64}(undef, K)
     p95     = Vector{Float64}(undef, K)
     for k in 1:K
         s = rand(rng, _draw_dist(family, p_a, k), n_per_draw) .+
             rand(rng, _draw_dist(family, p_b, k), n_per_draw)
         means[k]   = mean(s)
         medians[k] = quantile(s, 0.5)
+        sds[k]     = std(s)
         p95[k]     = quantile(s, 0.95)
     end
-    return (; means, medians, p95)
+    return (; means, medians, sds, p95)
 end
 
 """
@@ -209,8 +211,10 @@ function summarise(chn, family::Symbol; seed = 20260519, n_per_draw = 500)
         shape_ac = pp_ac.shapes, shape_on = pp_on.shapes,
         scale_oa = pp_oa.scales, scale_ad = pp_ad.scales,
         scale_ac = pp_ac.scales, scale_on = pp_on.scales,
-        od_mean = od_conv.means, od_median = od_conv.medians, od_p95 = od_conv.p95,
-        oc_mean = oc_conv.means, oc_median = oc_conv.medians, oc_p95 = oc_conv.p95,
+        od_mean = od_conv.means, od_median = od_conv.medians,
+        od_sd   = od_conv.sds,   od_p95    = od_conv.p95,
+        oc_mean = oc_conv.means, oc_median = oc_conv.medians,
+        oc_sd   = oc_conv.sds,   oc_p95    = oc_conv.p95,
         β_0, β_hcw, β_def, β_age,
         cfr_baseline, cfr_hcw_conf, cfr_nonhcw_prob, cfr_hcw_prob,
     )
@@ -262,9 +266,11 @@ end
 function _print_conv(label, conv)
     m_lo, m_med, m_hi = qci(conv.medians)
     e_lo, e_med, e_hi = qci(conv.means)
+    s_lo, s_med, s_hi = qci(conv.sds)
     p_lo, p_med, p_hi = qci(conv.p95)
-    @printf("  %-22s  median %5.2f (%4.2f – %5.2f)  mean %5.2f (%4.2f – %5.2f)  P95 %5.2f (%4.2f – %5.2f)\n",
-            string(label), m_med, m_lo, m_hi, e_med, e_lo, e_hi, p_med, p_lo, p_hi)
+    @printf("  %-22s  median %5.2f (%4.2f – %5.2f)  mean %5.2f (%4.2f – %5.2f)  SD %5.2f (%4.2f – %5.2f)  P95 %5.2f (%4.2f – %5.2f)\n",
+            string(label), m_med, m_lo, m_hi, e_med, e_lo, e_hi,
+            s_med, s_lo, s_hi, p_med, p_lo, p_hi)
 end
 
 function _print_cfr(label, p)

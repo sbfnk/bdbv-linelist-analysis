@@ -47,6 +47,50 @@ d  = build_data(ll)
     first(8)
 end
 
+# ## Outbreak context
+#
+# Per the Charniga *et al.* 2024 reporting checklist (item 12: provide
+# the contextual information needed to interpret the delays). Sample
+# size, observation window, demographics, case-definition mix and
+# care-setting are summarised here; epidemic curve and control measures
+# are below ([Epidemic curve](#Epidemic-curve)) and on the
+# [Limitations](limitations.md) page (outbreak setting and ETC support).
+let onsets = collect(skipmissing(ll.Date_of_onset_symp)),
+    ages   = collect(skipmissing(ll.Age)),
+    sexes  = collect(skipmissing(ll.Sex))
+    DataFrame(
+        "Quantity" => [
+            "Total cases", "Cases with onset date",
+            "Onset window",
+            "Median age (IQR), years",
+            "Sex (Female / Male)",
+            "HCW (yes / no)",
+            "Case definition (Confirmed / Probable)",
+            "Outcome (Dead / Alive / Unknown)",
+        ],
+        "Value" => [
+            string(nrow(ll)),
+            string(length(onsets)),
+            @sprintf("%s to %s", minimum(onsets), maximum(onsets)),
+            @sprintf("%.0f (%.0f – %.0f)",
+                     quantile(ages, 0.5),
+                     quantile(ages, 0.25),
+                     quantile(ages, 0.75)),
+            @sprintf("%d / %d",
+                     count(==("Female"), sexes), count(==("Male"), sexes)),
+            @sprintf("%d / %d", sum(ll.is_hcw), nrow(ll) - sum(ll.is_hcw)),
+            @sprintf("%d / %d",
+                     count(==("Confirmed"), skipmissing(ll.Case_definition)),
+                     count(==("Probable"),  skipmissing(ll.Case_definition))),
+            @sprintf("%d / %d / %d",
+                     count(==("Dead"),  skipmissing(ll.Outcome)),
+                     count(==("Alive"), skipmissing(ll.Outcome)),
+                     count(o -> !(o in ("Dead", "Alive")),
+                           skipmissing(ll.Outcome))),
+        ],
+    )
+end
+
 # ## Headline Gamma estimates
 #
 # Fit all three families (Gamma wins on WAIC; comparison table and
@@ -230,6 +274,7 @@ convolved_marginals = DataFrame(
     ],
     median = [fmt(post.od_median), fmt(post.oc_median)],
     mean   = [fmt(post.od_mean),   fmt(post.oc_mean)],
+    sd     = [fmt(post.od_sd),     fmt(post.oc_sd)],
     P95    = [fmt(post.od_p95),    fmt(post.oc_p95)],
 )
 
