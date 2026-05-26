@@ -55,6 +55,7 @@ makedocs(;
         "Home" => "index.md",
         "Model" => "model.md",
         "Limitations" => "limitations.md",
+        "Charniga 2024 checklist" => "charniga-checklist.md",
         "Analysis walkthrough" => "analysis.md",
         "API Reference" => "api.md"
     ],
