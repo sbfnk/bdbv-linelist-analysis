@@ -87,7 +87,7 @@ Returns a named tuple with:
 The fit uses weakly-informative `Normal(0, 5)` on the intercept and
 `Normal(0, 1)` on `r_week`; 1000 post-warmup samples, 2 chains. The
 posterior on `r_day` is the recommended Normal-prior source for
-downstream models — see [LIMITATIONS.md](LIMITATIONS.md).
+downstream models — see [LIMITATIONS.md](https://github.com/epiforecasts/bdbv-linelist-analysis/blob/main/LIMITATIONS.md).
 """
 function fit_growth_rate(ll; n_samples = 1000, n_chains = 2, seed = 20260526)
     w = weekly_onset_counts(ll)
