@@ -68,6 +68,54 @@ function weekly_onset_counts(ll)
     return DataFrame(week_start = weeks, count = counts, hcw_count = hcw_counts)
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Fit `log(λ_t) = α + r·t` (Poisson, weekly bins of onset counts) to
+the rising phase of the Isiro outbreak — week 1 through the
+modal-count week, inclusive. Intended as an upstream prior source
+for downstream re-applications (e.g. outbreak-size work in
+`epiforecasts/BVDOutbreakSize`).
+
+Returns a named tuple with:
+
+- `r_week`, `r_day`: posterior draws of the growth rate per week and per day.
+- `doubling_time`: posterior draws of `log(2) / r_day` (days).
+- `rising`: the `DataFrame` slice of weekly counts that was fitted.
+- `chain`: the underlying `Turing` chain (for diagnostics).
+
+The fit uses weakly-informative `Normal(0, 5)` on the intercept and
+`Normal(0, 1)` on `r_week`; 1000 post-warmup samples, 2 chains. The
+posterior on `r_day` is the recommended Normal-prior source for
+downstream models — see [LIMITATIONS.md](LIMITATIONS.md).
+"""
+function fit_growth_rate(ll; n_samples = 1000, n_chains = 2, seed = 20260526)
+    w = weekly_onset_counts(ll)
+    peak_idx = argmax(w.count)
+    rising = w[1:peak_idx, :]
+    t_weeks = collect(0:(peak_idx - 1))
+    y = rising.count
+
+    @model function _exp_growth(t, y)
+        α       ~ Normal(0, 5)
+        r_week  ~ Normal(0, 1)
+        for i in eachindex(y)
+            y[i] ~ Poisson(exp(α + r_week * t[i]))
+        end
+    end
+
+    rng = MersenneTwister(seed)
+    chain = sample(rng, _exp_growth(t_weeks, y),
+                   NUTS(0.95), MCMCSerial(),
+                   n_samples, n_chains;
+                   progress = false)
+
+    r_week = vec(collect(chain[@varname(r_week)]))
+    r_day  = r_week ./ 7
+    doubling_time = log(2) ./ r_day
+    return (; r_week, r_day, doubling_time, rising, chain)
+end
+
 # Integer day-difference for each case where both dates exist and the
 # delay is non-negative. Used to scrub biologically-impossible
 # encoding errors at the same time as collecting per-pair delays.
