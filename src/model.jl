@@ -67,6 +67,22 @@ end
     return s
 end
 
+# One stratum × delay-component weighted log-likelihood. Builds the
+# doubly-censored distribution from the family + log-mean (which the
+# caller may have shifted by the HCW β) + log-shape, then sums
+# count-weighted `logpdf` over the unique values in `obs`. Returns
+# zero (typed to the param-promoted Real) when `obs` is empty so the
+# caller can pass it through `@addlogprob!` unconditionally.
+@inline function _stratum_loglik(fam, log_mean, log_shape, obs)
+    isempty(obs) && return zero(log_mean + log_shape)
+    u, c = _unique_counts(obs)
+    return _weighted_loglik(
+        double_interval_censored(
+            build_delay_dist(fam, log_mean, log_shape);
+            interval = 1.0),
+        u, c)
+end
+
 # Family singletons used for dispatch. The symbol-keyed public API
 # (`:lognormal`, `:gamma`, `:weibull`) is converted to one of these
 # at a single boundary, `delay_family`; everything internal dispatches
@@ -210,6 +226,17 @@ build the death-pathway mixture marginal.
     p_admit ~ Beta(1 + n_admit_died, 1 + n_comm_died)
 end
 
+# Build the doubly-interval-censored filldist for one stratum of one
+# delay component (used by `bdbv_model_stratified` to keep the eight
+# stratum × component likelihood lines free of repeated boilerplate).
+_stratum_dist(fam, log_mean, log_shape, obs) = Turing.filldist(
+    double_interval_censored(
+        build_delay_dist(fam, log_mean, log_shape);
+        interval = 1.0,
+    ),
+    length(obs),
+)
+
 """
 $(TYPEDSIGNATURES)
 
@@ -244,62 +271,20 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
     β_ac_hcw ~ Normal(0.0, 0.5)
     β_on_hcw ~ Normal(0.0, 0.5)
 
-    # Per-stratum weighted-by-multiplicity likelihood per delay. Field-name
-    # suffix convention: `_h` = HCW subset, `_n` = non-HCW subset (e.g.
-    # `d.ac_n` is the non-HCW admission→discharge delays). These subsets
-    # are pre-split fields of the data tuple. Compression to uniques +
-    # counts uses the same pattern as `bdbv_model` (see issue #4).
-    if !isempty(d.oa_h)
-        u, c = _unique_counts(d.oa_h)
-        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
-            build_delay_dist(fam, log_mean_oa + β_oa_hcw, log_shape_oa);
-            interval = 1.0), u, c)
-    end
-    if !isempty(d.oa_n)
-        u, c = _unique_counts(d.oa_n)
-        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
-            build_delay_dist(fam, log_mean_oa, log_shape_oa);
-            interval = 1.0), u, c)
-    end
-
-    if !isempty(d.ad_h)
-        u, c = _unique_counts(d.ad_h)
-        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
-            build_delay_dist(fam, log_mean_ad + β_ad_hcw, log_shape_ad);
-            interval = 1.0), u, c)
-    end
-    if !isempty(d.ad_n)
-        u, c = _unique_counts(d.ad_n)
-        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
-            build_delay_dist(fam, log_mean_ad, log_shape_ad);
-            interval = 1.0), u, c)
-    end
-
-    if !isempty(d.ac_h)
-        u, c = _unique_counts(d.ac_h)
-        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
-            build_delay_dist(fam, log_mean_ac + β_ac_hcw, log_shape_ac);
-            interval = 1.0), u, c)
-    end
-    if !isempty(d.ac_n)
-        u, c = _unique_counts(d.ac_n)
-        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
-            build_delay_dist(fam, log_mean_ac, log_shape_ac);
-            interval = 1.0), u, c)
-    end
-
-    if !isempty(d.on_h)
-        u, c = _unique_counts(d.on_h)
-        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
-            build_delay_dist(fam, log_mean_on + β_on_hcw, log_shape_on);
-            interval = 1.0), u, c)
-    end
-    if !isempty(d.on_n)
-        u, c = _unique_counts(d.on_n)
-        Turing.@addlogprob! _weighted_loglik(double_interval_censored(
-            build_delay_dist(fam, log_mean_on, log_shape_on);
-            interval = 1.0), u, c)
-    end
+    # Per-stratum weighted-by-multiplicity likelihood per delay.
+    # Field-name suffix convention: `_h` = HCW subset, `_n` = non-HCW
+    # subset. `_stratum_loglik` handles the empty-subset case, applies
+    # the HCW shift (when given) to the log-mean, builds the
+    # doubly-censored distribution via `build_delay_dist`, and weights
+    # the per-unique-value `logpdf` calls by multiplicity (issue #4).
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_oa + β_oa_hcw, log_shape_oa, d.oa_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_oa,            log_shape_oa, d.oa_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ad + β_ad_hcw, log_shape_ad, d.ad_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ad,            log_shape_ad, d.ad_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ac + β_ac_hcw, log_shape_ac, d.ac_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ac,            log_shape_ac, d.ac_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_on + β_on_hcw, log_shape_on, d.on_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_on,            log_shape_on, d.on_n)
 
     # CFR block — same as the unstratified model.
     β_0   ~ Normal(0.0, 2.0)
