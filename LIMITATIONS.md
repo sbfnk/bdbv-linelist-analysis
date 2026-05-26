@@ -27,19 +27,13 @@
 
 ## Model
 
-- Per-case censoring is treated as independent across delays. The
-  day-window uncertainty on `T_onset` is shared between the
-  `onset → admission` and `onset → notification` observations of the
-  same case; treating them as independent inflates posterior variance
-  slightly but is unbiased.
-- A latent-time joint model was prototyped (v3 with per-case
-  `T_onset`, `T_admit` latents and ordering constraints). It hit
-  wedge-shaped boundary geometry NUTS handles poorly at the 6
-  same-day-admission cases (308 divergent transitions). The marginal
-  formulation used here matches what CensoredDistributions.jl
-  supports and what Charniga *et al.* 2024 recommend for retrospective
-  complete-outbreak data. The natural-history identity is enforced
-  via convolution post-processing.
+- The HCW-stratified delay model (`bdbv_model_stratified`) still uses
+  the marginalised `double_interval_censored` formulation and so
+  treats per-case censoring as independent across delays. The main
+  `bdbv_model` was converted to per-case latents (see "Model" in
+  `MODEL.md`); the stratified variant is a smaller analysis used only
+  for the HCW-vs-non-HCW odds-ratio table and has not yet been
+  ported.
 - No latent severity links delays and mortality. The delay fits and
   the CFR fits do not share information about case severity.
 - Age effect is linear in standardised age. Nonlinearities
@@ -58,11 +52,11 @@
 
 ## Inference
 
-- InitFromPrior works here. Per-case latent-time variants would need
-  stricter initialisation.
-- AutoForwardDiff is used rather than Enzyme —
-  `CensoredDistributions`' integral-based likelihood is not yet
-  uniformly Enzyme-friendly. ForwardDiff is fast enough at this size.
+- InitFromPrior works here. The bounded-primary reparametrisation
+  on the per-case latents means NUTS sees a smoothly-bounded support
+  (no hard `t_s > t_p` constraint), so warm-up is well-behaved.
+- AutoForwardDiff is used rather than Enzyme. ForwardDiff is fast
+  enough at this size.
 - Single seed (20260519). The convergence diagnostics are strong but
   a multi-seed run is a useful robustness check.
 

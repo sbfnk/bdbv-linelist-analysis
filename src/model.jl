@@ -1,18 +1,23 @@
-## Turing model for the 2012 Isiro BDBV outbreak. The four atomic
-## delay components and the CFR block share no latent variables —
-## the natural-history identity (onset→death = onset→admit ⊕
-## admit→death) is recovered in post-processing via convolution
-## (see LIMITATIONS.md for why the latent-time joint variant was
-## abandoned).
+## Turing model for the 2012 Isiro BDBV outbreak.
 ##
-## Four atomic delay components are fitted with double interval
-## censoring at the day level (`CensoredDistributions.double_interval_censored`,
-## default `primary_event = Uniform(0, 1)`, `interval = 1.0`):
+## Per-case latent event times (T_onset, T_admit, T_death/T_disch,
+## T_notif — sampled where observed) are shared across that case's
+## delays, so the four atomic components are fitted jointly and the
+## natural-history identity (onset→death = onset→admit ⊕ admit→death)
+## holds per case for every posterior draw:
 ##
 ##   d_oa  onset → admission     (n = 40)
 ##   d_ad  admission → death     (n = 22)
 ##   d_ac  admission → discharge (n = 15)
 ##   d_on  onset → notification  (n = 38)
+##
+## Within-day positions use the bounded-primary reparametrisation
+## (the secondary event time bounds the primary's upper window edge
+## directly) so NUTS doesn't see the wedge-shaped corner that a
+## naive `T_admit ≤ T_death` ordering constraint produces at same-day
+## cases. Each bounded prior carries a `log(upper − L)` Jacobian to
+## restore the implicit independent-uniform-over-day-window prior of
+## the equivalent marginalised double-interval-censoring model.
 ##
 ## Three parametric families are supported (LogNormal, Gamma, Weibull),
 ## selected via `family ∈ (:lognormal, :gamma, :weibull)`. All three
@@ -26,16 +31,12 @@
 ## (μ, σ) for LogNormal, (k, θ = mean/k) for Gamma, and
 ## (α, θ = mean/Γ(1+1/α)) for Weibull.
 ##
-## The marginal onset → death and onset → discharge distributions are
-## derived in post-processing as convolutions of d_oa with d_ad and
-## d_ac (only for LogNormal, since the convolution is closed-form-
-## adjacent there; Gamma/Weibull convolutions are sampled).
+## The marginal onset → death and onset → discharge population
+## distributions are derived in post-processing as Monte-Carlo
+## convolutions of the fitted atomic components.
 ##
 ## A separate CFR block (Bernoulli with logistic link on HCW, case
 ## definition, standardised age) uses all 52 cases.
-##
-## Per-case censoring noise across the four delays of the same case is
-## treated as independent — see `LIMITATIONS.md`.
 
 # Numerically safe logistic — pin away from {0, 1} to keep
 # Bernoulli's domain check happy when η drifts during NUTS warmup.
@@ -105,37 +106,95 @@ $(TYPEDSIGNATURES)
 
 Turing model for the BDBV Isiro 2012 line list, parametrised by
 the choice of delay-distribution family (`:lognormal`, `:gamma`,
-or `:weibull`). Estimates four doubly-censored delay components via
-the submodel pattern of CensoredDistributions.jl, and a stratified
-CFR logistic regression. The delay components and CFR block share
-no latent variables; the marginal onset→death and onset→discharge
-distributions are derived in post-processing as convolutions of
-the atomic components.
+or `:weibull`). Estimates four delay components and a stratified
+CFR logistic regression.
+
+Per-case latent event times (`T_onset`, `T_admit`, `T_death`,
+`T_disch`, `T_notif`, sampled where observed) are shared across
+that case's atomic delays, so the natural-history identity
+(`D_oa + D_ad = D_od` per case) is enforced *in* the model rather
+than recovered in post-processing. Within-day positions are
+sampled with Sam Abbott's bounded-primary reparametrisation —
+
+    T_death/T_disch ~ Uniform(day, day + 1)                       # leaf
+    T_admit         ~ Uniform(day, min(day + 1, T_death, T_disch))
+    T_notif         ~ Uniform(day, day + 1)
+    T_onset         ~ Uniform(day, min(day + 1, T_admit, T_notif))
+
+— which absorbs the ordering constraint into the support and
+avoids the wedge-shaped boundary geometry NUTS handles poorly at
+same-day cases. A `log(upper − L)` Jacobian on each bounded prior
+restores the implicit independent-uniform-over-day-window prior of
+the equivalent marginalised model.
+
+Reference: Park *et al.* 2024 (medRxiv
+[2024.01.12.24301247](https://doi.org/10.1101/2024.01.12.24301247))
+§2.3.3 for the latent-variable formulation; the bounded-primary
+trick is from Sam Abbott.
 """
-@model function bdbv_model(d; family::Symbol = :gamma, prior_scale::Float64 = 1.0)
+@model function bdbv_model(d; family::Symbol = :gamma,
+        prior_scale::Float64 = 1.0)
     fam = delay_family(family)
 
-    # Delay-component suffixes used throughout: oa = onset→admission,
-    # ad = admission→death, ac = admission→discharge, on = onset→notification.
-    # `dist_*` is the underlying continuous distribution; `dic_*` is its
-    # doubly-interval-censored counterpart used in the likelihood.
     dist_oa ~ to_submodel(delay_prior(fam, log(3.0),  prior_scale, prior_scale))
     dist_ad ~ to_submodel(delay_prior(fam, log(6.0),  prior_scale, prior_scale))
     dist_ac ~ to_submodel(delay_prior(fam, log(13.0), prior_scale, prior_scale))
     dist_on ~ to_submodel(delay_prior(fam, log(7.0),  prior_scale, prior_scale))
 
-    dic_oa = double_interval_censored(dist_oa; interval = 1.0)
-    dic_ad = double_interval_censored(dist_ad; interval = 1.0)
-    dic_ac = double_interval_censored(dist_ac; interval = 1.0)
-    dic_on = double_interval_censored(dist_on; interval = 1.0)
+    N = length(d.case_events)
+    T_onset = Vector{Real}(undef, N)
+    T_admit = Vector{Real}(undef, N)
+    T_death = Vector{Real}(undef, N)
+    T_disch = Vector{Real}(undef, N)
+    T_notif = Vector{Real}(undef, N)
 
-    d.onset_to_admit     ~ Turing.filldist(dic_oa, length(d.onset_to_admit))
-    d.admit_to_death     ~ Turing.filldist(dic_ad, length(d.admit_to_death))
-    d.admit_to_discharge ~ Turing.filldist(dic_ac, length(d.admit_to_discharge))
-    d.onset_to_notif     ~ Turing.filldist(dic_on, length(d.onset_to_notif))
+    for i in 1:N
+        c = d.case_events[i]
+        has_onset = !ismissing(c.onset)
+        has_admit = !ismissing(c.admit)
+        has_death = !ismissing(c.death)
+        has_disch = !ismissing(c.disch)
+        has_notif = !ismissing(c.notif)
 
-    # CFR logistic regression coefficients: intercept, HCW indicator,
-    # case-definition indicator (probable vs confirmed), and standardised age.
+        if has_death
+            T_death[i] ~ Uniform(c.death, c.death + 1.0)
+        end
+        if has_disch
+            T_disch[i] ~ Uniform(c.disch, c.disch + 1.0)
+        end
+        if has_admit
+            upper = c.admit + 1.0
+            has_death && (upper = min(upper, T_death[i]))
+            has_disch && (upper = min(upper, T_disch[i]))
+            T_admit[i] ~ Uniform(c.admit, upper)
+            # Jacobian to match independent-uniform priors over each
+            # event's day window (the marginalised model's implicit
+            # prior). Vanishes for multi-day cases (`upper - c.admit = 1`).
+            Turing.@addlogprob!(log(upper - c.admit))
+        end
+        if has_notif
+            T_notif[i] ~ Uniform(c.notif, c.notif + 1.0)
+        end
+        if has_onset
+            upper = c.onset + 1.0
+            has_admit && (upper = min(upper, T_admit[i]))
+            has_notif && (upper = min(upper, T_notif[i]))
+            T_onset[i] ~ Uniform(c.onset, upper)
+            Turing.@addlogprob!(log(upper - c.onset))
+        end
+
+        has_onset && has_admit &&
+            Turing.@addlogprob!(logpdf(dist_oa, T_admit[i] - T_onset[i]))
+        has_admit && has_death &&
+            Turing.@addlogprob!(logpdf(dist_ad, T_death[i] - T_admit[i]))
+        has_admit && has_disch &&
+            Turing.@addlogprob!(logpdf(dist_ac, T_disch[i] - T_admit[i]))
+        has_onset && has_notif &&
+            Turing.@addlogprob!(logpdf(dist_on, T_notif[i] - T_onset[i]))
+    end
+
+    # CFR logistic regression: intercept, HCW indicator, case-definition
+    # indicator (probable vs confirmed), and standardised age.
     β_0   ~ Normal(0.0, 2.0)
     β_hcw ~ Normal(0.0, 1.0)
     β_def ~ Normal(0.0, 1.0)

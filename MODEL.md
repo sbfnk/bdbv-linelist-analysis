@@ -2,10 +2,12 @@
 
 Two blocks fitted to the 2012 Isiro BDBV line list (n = 52):
 
-1. Four atomic delay components, each a doubly-censored distribution
-   wrapped in `CensoredDistributions.double_interval_censored` with
-   `interval = 1.0` (1-day reporting bins on both endpoints, default
-   `primary_event = Uniform(0, 1)`).
+1. Four atomic delay components, fitted via per-case latent event
+   times (`T_onset`, `T_admit`, `T_death`, `T_disch`, `T_notif`,
+   sampled where observed) within their respective day windows.
+   Latents are shared across that case's delays, so the
+   natural-history identity `D_oa + D_ad = D_od` holds *per case*
+   for every posterior draw.
 2. Stratified case-fatality: Bernoulli outcome with a logistic link
    on HCW status, case definition (Probable vs Confirmed), and
    standardised age.
@@ -16,7 +18,9 @@ canonical run uses Gamma — lowest WAIC.
 
 `bdbv_model_stratified(d; family)` adds a `β_*_hcw` log-mean shift to
 each delay so HCW and non-HCW cases share the shape parameter but can
-differ on the central tendency.
+differ on the central tendency. (This variant still uses the
+marginalised `double_interval_censored` formulation; see
+[LIMITATIONS.md](LIMITATIONS.md).)
 
 ## Common parametrisation across families
 
@@ -34,10 +38,11 @@ doesn't blow up. The Weibull stratified model is not supported.
 
 ## Compound delays via convolution post-processing
 
-Fitting `onset → death` and `onset → discharge` separately alongside
-their atomic components would violate the per-case identity
-`onset → death = onset → admit + admit → death`. So the model fits
-only the four atomic components:
+The model fits only the four atomic components — the natural-history
+identity (`onset → death = onset → admit + admit → death`) is
+satisfied per case by construction, so fitting `onset → death`
+separately would just duplicate the information already in the
+shared latents.
 
 | Symbol | Component                | n  |
 |---     |---                       |--- |
@@ -46,13 +51,11 @@ only the four atomic components:
 | `d_ac` | admission → discharge    | 15 |
 | `d_on` | onset → notification     | 38 |
 
-and derives `d_od` and `d_oc` in post-processing as sample-level
-convolutions. The mean of the convolved marginal equals the sum of
-the atomic means by linearity of expectation; medians and quantiles
-come from Monte Carlo (500 samples per posterior draw).
-
-Per-case censoring noise across the four delays of the same case is
-treated as independent — see [LIMITATIONS.md](LIMITATIONS.md).
+`d_od` and `d_oc` are derived in post-processing as sample-level
+convolutions of the population atomic distributions. The mean of the
+convolved marginal equals the sum of the atomic means by linearity
+of expectation; medians and quantiles come from Monte Carlo (500
+samples per posterior draw).
 
 ## Priors
 
@@ -78,12 +81,35 @@ either way on the central tendency. A 3-scale sensitivity sweep
 
 ## Likelihood
 
-For each atomic delay `j ∈ {oa, ad, ac, on}`:
+For each case `i`, sample the per-case event-time latents (where
+observed) in reverse-chain order with **Sam Abbott's
+bounded-primary trick** — the secondary event time bounds the
+primary's upper window edge directly, so the support is smoothly
+parametrised and NUTS doesn't see the wedge-shaped corner that the
+naive `T_admit ≤ T_death` constraint would produce at same-day
+cases:
 
 ```julia
-dic_j = double_interval_censored(dist_j; interval = 1.0)
-observed_j ~ Turing.filldist(dic_j, length(observed_j))
+T_death ~ Uniform(day, day + 1)                   # leaf event
+T_disch ~ Uniform(day, day + 1)
+T_admit ~ Uniform(day, min(day + 1, T_death, T_disch))
+T_notif ~ Uniform(day, day + 1)
+T_onset ~ Uniform(day, min(day + 1, T_admit, T_notif))
 ```
+
+For each ordered pair both observed in the case, add the delay
+likelihood `logpdf(dist_*, t_later − t_earlier)`.
+
+Each bounded prior also carries a `log(upper − L)` Jacobian, which
+restores the implicit independent-uniform-over-day-window prior of
+the equivalent marginalised double-interval-censoring model. The
+Jacobian vanishes for multi-day cases (where the upper bound is
+just the natural day-window edge) and only contributes when the
+ordering constraint binds (6 same-day cases here).
+
+See Park *et al.* 2024 (medRxiv
+[2024.01.12.24301247](https://doi.org/10.1101/2024.01.12.24301247))
+§2.3.3 for the latent-variable formulation that this builds on.
 
 CFR block:
 

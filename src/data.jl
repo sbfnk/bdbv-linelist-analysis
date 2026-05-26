@@ -168,12 +168,39 @@ function build_data(ll)
     # drop-in Rosello-equivalent single-distribution fit.
     onset_to_death_all = _pair_delays(onset, death)
 
+    # Per-case event days, expressed as offsets from each case's
+    # onset day. Used by the per-case shared-latent model
+    # (`bdbv_model_latent_joint`) so the four delays of a single
+    # case share the same `T_onset` / `T_admit` latents and the
+    # natural-history identity is enforced in the model rather than
+    # in post-processing. Each event's day is `missing` when not
+    # observed (or scrubbed as an outlier in `load_linelist`).
+    # Negative offsets (later event recorded as earlier than the
+    # primary) are encoding errors. The pairwise delay vectors drop
+    # them via `_pair_delays_with_hcw`'s `δ ≥ 0` filter; here we set
+    # the offending event to `missing` so the per-case latent model
+    # treats it consistently.
+    _nn_offset(o, e) = (ismissing(o) || ismissing(e)) ? missing :
+        (let δ = Float64(Dates.value(e - o)); δ < 0 ? missing : δ end)
+
+    case_events = [
+        (
+            onset = ismissing(onset[i]) ? missing : 0.0,
+            admit = _nn_offset(onset[i], admit[i]),
+            death = _nn_offset(onset[i], death[i]),
+            disch = _nn_offset(onset[i], disch[i]),
+            notif = _nn_offset(onset[i], notif[i]),
+        )
+        for i in 1:nrow(ll)
+    ]
+
     return (;
         onset_to_admit, admit_to_death, admit_to_discharge, onset_to_notif,
         hcw_oa, hcw_ad, hcw_ac, hcw_on,
         oa_h, oa_n, ad_h, ad_n, ac_h, ac_n, on_h, on_n,
         onset_to_comm_death, n_admit_died, n_comm_died,
         onset_to_death_all,
+        case_events,
         outcome, hcw, probable, age_z,
         N = nrow(ll),
     )
