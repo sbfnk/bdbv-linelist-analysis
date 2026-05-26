@@ -13,6 +13,8 @@ line list — the 2012 Isiro outbreak in Haut-Uélé, DRC, as deposited by
 
 ⚠️ **[Limitations](https://epiforecasts.io/bdbv-linelist-analysis/dev/limitations)** — read before using these estimates: data, model, inference, and generalisability caveats (HTML)
 
+✅ **[Charniga 2024 checklist](https://epiforecasts.io/bdbv-linelist-analysis/dev/charniga-checklist)** — best-practice item-by-item compliance table (HTML)
+
 📦 **[Posterior CSV and figures](https://github.com/epiforecasts/bdbv-linelist-analysis/releases/tag/main-latest)** — `main-latest` rolling release bundle
 
 📖 **[Model description](https://epiforecasts.io/bdbv-linelist-analysis/dev/model)** — priors, likelihood, inference (HTML)
