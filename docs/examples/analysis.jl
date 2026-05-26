@@ -163,6 +163,30 @@ convolved_marginals = DataFrame(
     P95    = [fmt(post.od_p95),    fmt(post.oc_p95)],
 )
 
+# ## Gamma shape, scale and SD per atomic delay
+#
+# Underlying-distribution parameters for downstream consumers that need
+# to reconstruct each atomic Gamma delay rather than just its central
+# tendency.
+
+gamma_parameters = DataFrame(
+    delay = [
+        "Onset → admission",
+        "Admission → death",
+        "Admission → discharge",
+        "Onset → notification",
+    ],
+    "shape (95% CrI)" =>
+        [fmt(post.shape_oa), fmt(post.shape_ad),
+         fmt(post.shape_ac), fmt(post.shape_on)],
+    "scale (95% CrI)" =>
+        [fmt(post.scale_oa), fmt(post.scale_ad),
+         fmt(post.scale_ac), fmt(post.scale_on)],
+    "sd (95% CrI)" =>
+        [fmt(post.sd_oa), fmt(post.sd_ad),
+         fmt(post.sd_ac), fmt(post.sd_on)],
+)
+
 # ## Stratified case-fatality
 
 cfr_table = DataFrame(

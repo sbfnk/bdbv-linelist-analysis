@@ -171,11 +171,16 @@ function summarise(chn, family::Symbol; seed = 20260519, n_per_draw = 500)
     _print_delay(:admit_to_discharge,    p_ac)
     _print_delay(:onset_to_notification, p_on)
 
+    pp_oa = _delay_params_full(family, p_oa)
+    pp_ad = _delay_params_full(family, p_ad)
+    pp_ac = _delay_params_full(family, p_ac)
+    pp_on = _delay_params_full(family, p_on)
+
     println("\n=== Drop-in distribution parameters (mean, SD, Gamma shape/scale) ===\n")
-    _print_delay_params(:onset_to_admit,        family, _delay_params_full(family, p_oa))
-    _print_delay_params(:admit_to_death,        family, _delay_params_full(family, p_ad))
-    _print_delay_params(:admit_to_discharge,    family, _delay_params_full(family, p_ac))
-    _print_delay_params(:onset_to_notification, family, _delay_params_full(family, p_on))
+    _print_delay_params(:onset_to_admit,        family, pp_oa)
+    _print_delay_params(:admit_to_death,        family, pp_ad)
+    _print_delay_params(:admit_to_discharge,    family, pp_ac)
+    _print_delay_params(:onset_to_notification, family, pp_on)
 
     println("\n=== Derived (convolved) marginals ===\n")
     _print_conv(:onset_to_death,     od_conv)
@@ -198,6 +203,12 @@ function summarise(chn, family::Symbol; seed = 20260519, n_per_draw = 500)
         mean_ad = p_ad.mean, median_ad = p_ad.median,
         mean_ac = p_ac.mean, median_ac = p_ac.median,
         mean_on = p_on.mean, median_on = p_on.median,
+        sd_oa    = pp_oa.sds,    sd_ad    = pp_ad.sds,
+        sd_ac    = pp_ac.sds,    sd_on    = pp_on.sds,
+        shape_oa = pp_oa.shapes, shape_ad = pp_ad.shapes,
+        shape_ac = pp_ac.shapes, shape_on = pp_on.shapes,
+        scale_oa = pp_oa.scales, scale_ad = pp_ad.scales,
+        scale_ac = pp_ac.scales, scale_on = pp_on.scales,
         od_mean = od_conv.means, od_median = od_conv.medians, od_p95 = od_conv.p95,
         oc_mean = oc_conv.means, oc_median = oc_conv.medians, oc_p95 = oc_conv.p95,
         β_0, β_hcw, β_def, β_age,
