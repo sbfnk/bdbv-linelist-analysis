@@ -52,10 +52,10 @@ end
 # Fit all three families (Gamma wins on WAIC; comparison table and
 # plot are in the [Family comparison](#Family-comparison) section
 # below) and tabulate the four atomic delay components alongside
-# Rosello *et al.* 2015 Table 5 means. The Rosello fits applied a
-# 30-day cap on the underlying dates — this is binding on
-# onset → notification (where 9 of 38 cases exceed 30 d) and
-# accounts for most of the difference there.
+# Rosello *et al.* 2015 Table 5 empirical means. Rosello capped the
+# raw delays at 30 days before computing those summary statistics —
+# this is binding on onset → notification (where 9 of 38 cases
+# exceed 30 d) and accounts for most of the difference there.
 
 ## Suppress the package's stdout printing — we build clean DataFrame
 ## tables from the returned posterior vectors below.
@@ -140,9 +140,9 @@ family_comparison = DataFrame(
 # column per family, four rows (one per delay). The LogNormal
 # tail-over-fit on the onset → notification panel is what drives the
 # WAIC penalty. The black dashed line in each panel marks the
-# Rosello *et al.* 2015 Table 5 mean for that delay (capped at 30
-# days in their fits) — the onset → notification gap is the most
-# visible consequence of that cap.
+# Rosello *et al.* 2015 Table 5 empirical mean for that delay
+# (computed after capping the raw delays at 30 days) — the
+# onset → notification gap is the most visible consequence of that cap.
 
 chains_by_family = Dict(f => results[f].chain for f in families)
 plot_family_comparison(chains_by_family, d)
@@ -161,6 +161,30 @@ convolved_marginals = DataFrame(
     median = [fmt(post.od_median), fmt(post.oc_median)],
     mean   = [fmt(post.od_mean),   fmt(post.oc_mean)],
     P95    = [fmt(post.od_p95),    fmt(post.oc_p95)],
+)
+
+# ## Gamma shape, scale and SD per atomic delay
+#
+# Underlying-distribution parameters for downstream consumers that need
+# to reconstruct each atomic Gamma delay rather than just its central
+# tendency.
+
+gamma_parameters = DataFrame(
+    "delay" => [
+        "Onset → admission",
+        "Admission → death",
+        "Admission → discharge",
+        "Onset → notification",
+    ],
+    "shape (95% CrI)" =>
+        [fmt(post.shape_oa), fmt(post.shape_ad),
+         fmt(post.shape_ac), fmt(post.shape_on)],
+    "scale (95% CrI)" =>
+        [fmt(post.scale_oa), fmt(post.scale_ad),
+         fmt(post.scale_ac), fmt(post.scale_on)],
+    "sd (95% CrI)" =>
+        [fmt(post.sd_oa), fmt(post.sd_ad),
+         fmt(post.sd_ac), fmt(post.sd_on)],
 )
 
 # ## Stratified case-fatality
