@@ -174,6 +174,17 @@ build the death-pathway mixture marginal.
     p_admit ~ Beta(1 + n_admit_died, 1 + n_comm_died)
 end
 
+# Build the doubly-interval-censored filldist for one stratum of one
+# delay component (used by `bdbv_model_stratified` to keep the eight
+# stratum × component likelihood lines free of repeated boilerplate).
+_stratum_dist(fam, log_mean, log_shape, obs) = Turing.filldist(
+    double_interval_censored(
+        build_delay_dist(fam, log_mean, log_shape);
+        interval = 1.0,
+    ),
+    length(obs),
+)
+
 """
 $(TYPEDSIGNATURES)
 
@@ -213,49 +224,19 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
     # non-HCW admission→discharge delays). These subsets are pre-split
     # fields of the data tuple so Turing treats them as observations
     # rather than parameters.
-    if !isempty(d.oa_h)
-        d.oa_h ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_oa + β_oa_hcw, log_shape_oa);
-            interval = 1.0), length(d.oa_h))
-    end
-    if !isempty(d.oa_n)
-        d.oa_n ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_oa, log_shape_oa);
-            interval = 1.0), length(d.oa_n))
-    end
-
-    if !isempty(d.ad_h)
-        d.ad_h ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_ad + β_ad_hcw, log_shape_ad);
-            interval = 1.0), length(d.ad_h))
-    end
-    if !isempty(d.ad_n)
-        d.ad_n ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_ad, log_shape_ad);
-            interval = 1.0), length(d.ad_n))
-    end
-
-    if !isempty(d.ac_h)
-        d.ac_h ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_ac + β_ac_hcw, log_shape_ac);
-            interval = 1.0), length(d.ac_h))
-    end
-    if !isempty(d.ac_n)
-        d.ac_n ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_ac, log_shape_ac);
-            interval = 1.0), length(d.ac_n))
-    end
-
-    if !isempty(d.on_h)
-        d.on_h ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_on + β_on_hcw, log_shape_on);
-            interval = 1.0), length(d.on_h))
-    end
-    if !isempty(d.on_n)
-        d.on_n ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_on, log_shape_on);
-            interval = 1.0), length(d.on_n))
-    end
+    #
+    # `_stratum_dist` builds the doubly-censored filldist for one
+    # stratum × delay component; the eight `~` lines below differ
+    # only in which field they observe and whether the HCW shift is
+    # added to the log-mean.
+    if !isempty(d.oa_h); d.oa_h ~ _stratum_dist(fam, log_mean_oa + β_oa_hcw, log_shape_oa, d.oa_h); end
+    if !isempty(d.oa_n); d.oa_n ~ _stratum_dist(fam, log_mean_oa,            log_shape_oa, d.oa_n); end
+    if !isempty(d.ad_h); d.ad_h ~ _stratum_dist(fam, log_mean_ad + β_ad_hcw, log_shape_ad, d.ad_h); end
+    if !isempty(d.ad_n); d.ad_n ~ _stratum_dist(fam, log_mean_ad,            log_shape_ad, d.ad_n); end
+    if !isempty(d.ac_h); d.ac_h ~ _stratum_dist(fam, log_mean_ac + β_ac_hcw, log_shape_ac, d.ac_h); end
+    if !isempty(d.ac_n); d.ac_n ~ _stratum_dist(fam, log_mean_ac,            log_shape_ac, d.ac_n); end
+    if !isempty(d.on_h); d.on_h ~ _stratum_dist(fam, log_mean_on + β_on_hcw, log_shape_on, d.on_h); end
+    if !isempty(d.on_n); d.on_n ~ _stratum_dist(fam, log_mean_on,            log_shape_on, d.on_n); end
 
     # CFR block — same as the unstratified model.
     β_0   ~ Normal(0.0, 2.0)
