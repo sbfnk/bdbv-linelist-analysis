@@ -139,6 +139,30 @@ function _convolve_delays(rng, family::Symbol, p_a, p_b; n_per_draw = 500)
     return (; means, medians, sds, p95)
 end
 
+# Per-draw two-component mixture of fitted delay distributions. Each of
+# the `n_per_draw` realisations is drawn from `p_a` with probability
+# `w[k]` (the per-draw mixing weight), otherwise from `p_b`. Used for
+# the in-hospital length-of-stay marginal, where `p_a` = admit→death,
+# `p_b` = admit→discharge, and `w` = in-hospital fatality among admitted
+# cases. Summarised across draws like `_convolve_delays`.
+function _mixture_delays(rng, family::Symbol, p_a, p_b, w; n_per_draw = 500)
+    K = length(p_a.mean)
+    means   = Vector{Float64}(undef, K)
+    medians = Vector{Float64}(undef, K)
+    sds     = Vector{Float64}(undef, K)
+    p95     = Vector{Float64}(undef, K)
+    for k in 1:K
+        a = rand(rng, _draw_dist(family, p_a, k), n_per_draw)
+        b = rand(rng, _draw_dist(family, p_b, k), n_per_draw)
+        s = ifelse.(rand(rng, n_per_draw) .< w[k], a, b)
+        means[k]   = mean(s)
+        medians[k] = quantile(s, 0.5)
+        sds[k]     = std(s)
+        p95[k]     = quantile(s, 0.95)
+    end
+    return (; means, medians, sds, p95)
+end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -146,8 +170,13 @@ Build the named tuple of posterior draws and print a headline
 summary table. Onset → death and onset → discharge are derived in
 post-processing as convolutions of the fitted onset→admit with
 admit→death and admit→discharge respectively.
+
+When the model input `d` is supplied, the in-hospital length-of-stay
+marginal (admission → departure) is also derived: a per-draw mixture
+of admit→death and admit→discharge, weighted by the in-hospital
+fatality among admitted cases (`Beta(1 + n_died, 1 + n_discharged)`).
 """
-function summarise(chn, family::Symbol; seed = 20260519, n_per_draw = 500)
+function summarise(chn, family::Symbol; d = nothing, seed = 20260519, n_per_draw = 500)
     p_oa = _delay_summary(chn, :dist_oa, family)
     p_ad = _delay_summary(chn, :dist_ad, family)
     p_ac = _delay_summary(chn, :dist_ac, family)
@@ -161,6 +190,20 @@ function summarise(chn, family::Symbol; seed = 20260519, n_per_draw = 500)
     rng = Random.MersenneTwister(seed)
     od_conv = _convolve_delays(rng, family, p_oa, p_ad; n_per_draw)
     oc_conv = _convolve_delays(rng, family, p_oa, p_ac; n_per_draw)
+
+    # In-hospital length of stay (admission → departure): mixture of the
+    # fitted admit→death and admit→discharge delays, weighted per draw by
+    # the in-hospital fatality among admitted cases. Drawn after the
+    # convolutions so their RNG stream is unchanged. Skipped when `d` is
+    # not supplied (the weight needs the admitted-case counts).
+    los_conv = nothing
+    p_die    = nothing
+    if d !== nothing
+        n_died       = length(d.admit_to_death)
+        n_discharged = length(d.admit_to_discharge)
+        p_die    = rand(rng, Beta(1 + n_died, 1 + n_discharged), length(p_ad.mean))
+        los_conv = _mixture_delays(rng, family, p_ad, p_ac, p_die; n_per_draw)
+    end
 
     cfr_baseline    = _logistic.(β_0)
     cfr_hcw_conf    = _logistic.(β_0 .+ β_hcw)
@@ -188,6 +231,17 @@ function summarise(chn, family::Symbol; seed = 20260519, n_per_draw = 500)
     _print_conv(:onset_to_death,     od_conv)
     _print_conv(:onset_to_discharge, oc_conv)
 
+    if los_conv !== nothing
+        println("\n=== Length of stay in hospital (admission → departure) ===\n")
+        println("  Overall = mixture of admit→death (fatal) and admit→discharge")
+        println("  (survivor), weighted by the in-hospital fatality among admitted")
+        println("  cases. The fatal and survivor rows repeat the atomic components.\n")
+        _print_cfr(:in_hospital_fatality, p_die)
+        _print_delay(:los_fatal,    p_ad)
+        _print_delay(:los_survivor, p_ac)
+        _print_conv(:los_overall,   los_conv)
+    end
+
     println("\n=== Stratified case-fatality ===\n")
     _print_cfr(:CFR_baseline_nonHCW_confirmed, cfr_baseline)
     _print_cfr(:CFR_HCW_confirmed,             cfr_hcw_conf)
@@ -199,7 +253,7 @@ function summarise(chn, family::Symbol; seed = 20260519, n_per_draw = 500)
     _print_logit(:beta_probable, β_def)
     _print_logit(:beta_age_z,    β_age)
 
-    return (;
+    base = (;
         family,
         mean_oa = p_oa.mean, median_oa = p_oa.median,
         mean_ad = p_ad.mean, median_ad = p_ad.median,
@@ -218,6 +272,12 @@ function summarise(chn, family::Symbol; seed = 20260519, n_per_draw = 500)
         β_0, β_hcw, β_def, β_age,
         cfr_baseline, cfr_hcw_conf, cfr_nonhcw_prob, cfr_hcw_prob,
     )
+    los_conv === nothing && return base
+    return merge(base, (;
+        in_hospital_fatality = p_die,
+        los_mean = los_conv.means, los_median = los_conv.medians,
+        los_sd   = los_conv.sds,   los_p95    = los_conv.p95,
+    ))
 end
 
 function _print_delay(label, p)
