@@ -231,16 +231,28 @@ function build_data(ll)
     _nn_offset(o, e) = (ismissing(o) || ismissing(e)) ? missing :
         (let δ = Float64(Dates.value(e - o)); δ < 0 ? missing : δ end)
 
-    case_events = [
+    # Cross-event consistency: death and discharge must follow admission.
+    # Without this, an admit-after-death encoding error would make
+    # `bdbv_model`'s `Uniform(T_admit_lower, T_admit_upper)` collapse with
+    # `upper < lower` (the admit upper bound is the minimum of the
+    # death/discharge times when those are observed). Drop the secondary
+    # event rather than admit, since admit is the more reliable
+    # timestamp in this deposit.
+    _after_admit(o, ad_off, e) = let δ = _nn_offset(o, e)
+        (ismissing(δ) || ismissing(ad_off) || δ >= ad_off) ? δ : missing
+    end
+
+    case_events = map(1:nrow(ll)) do i
+        o      = onset[i]
+        ad_off = _nn_offset(o, admit[i])
         (
-            onset = ismissing(onset[i]) ? missing : 0.0,
-            admit = _nn_offset(onset[i], admit[i]),
-            death = _nn_offset(onset[i], death[i]),
-            disch = _nn_offset(onset[i], disch[i]),
-            notif = _nn_offset(onset[i], notif[i]),
+            onset = ismissing(o) ? missing : 0.0,
+            admit = ad_off,
+            death = _after_admit(o, ad_off, death[i]),
+            disch = _after_admit(o, ad_off, disch[i]),
+            notif = _nn_offset(o, notif[i]),
         )
-        for i in 1:nrow(ll)
-    ]
+    end
 
     return (;
         onset_to_admit, admit_to_death, admit_to_discharge, onset_to_notif,
