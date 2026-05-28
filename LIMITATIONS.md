@@ -52,11 +52,14 @@
 
 ## Inference
 
-- InitFromPrior works here. The bounded-primary reparametrisation
-  on the per-case latents means NUTS sees a smoothly-bounded support
-  (no hard `t_s > t_p` constraint), so warm-up is well-behaved.
-- Single seed (20260519). The convergence diagnostics are strong but
-  a multi-seed run is a useful robustness check.
+- Sampler chains start from draws of the prior. The bounded-primary
+  reparametrisation on the per-case latent times (see
+  [MODEL.md](MODEL.md)) gives the sampler a smoothly-bounded support
+  for each event time — there is no hard "secondary must follow
+  primary" constraint to step across — so warm-up is well-behaved.
+- All reported results come from a single random seed (20260519).
+  Convergence diagnostics are strong, but a multi-seed run is a useful
+  robustness check that we have not done here.
 
 ## Generalisability
 
