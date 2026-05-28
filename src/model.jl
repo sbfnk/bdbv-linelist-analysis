@@ -135,11 +135,17 @@ end
     return build_delay_dist(GammaDelay(), log_mean, log_shape)
 end
 
-# Weibull's log-shape is truncated to keep `α ∈ (≈0.37, ≈2.7)` so
-# `Γ(1 + 1/α)` stays well-defined and the scale stays positive under NUTS.
+# Weibull's log-shape is truncated to keep `α ∈ (≈0.22, ≈4.5)` so
+# `Γ(1 + 1/α)` stays well-defined and the scale stays positive under
+# NUTS. The original `(−1, 1)` window was too tight on this dataset —
+# the `d_oa` (onset → admission) posterior pressed against the upper
+# bound (≈25% of draws above log_shape = 0.9) and degraded convergence
+# (max R̂ ≈ 1.22, min ESS ≈ 15). Loosening to `(−1.5, 1.5)` lets the
+# posterior breathe without admitting the pathological `α → 0` or
+# `α → ∞` corners.
 @model function delay_prior(::WeibullDelay, mean_loc, mean_scale, shape_scale)
     log_mean  ~ Normal(mean_loc, mean_scale)
-    log_shape ~ truncated(Normal(0.0, shape_scale); lower = -1.0, upper = 1.0)
+    log_shape ~ truncated(Normal(0.0, shape_scale); lower = -1.5, upper = 1.5)
     return build_delay_dist(WeibullDelay(), log_mean, log_shape)
 end
 
