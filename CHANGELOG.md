@@ -50,6 +50,11 @@ for the current state of `main`.
   model page.
 - Thread-safe sampling RNG and Gamma-only restriction on the stratified
   model.
+- `compute_waic` returning NaN for the LogNormal family: per-observation
+  draws with `logpdf == -Inf` (zero-delay observations at narrow
+  posterior draws) are now filtered before the LSE and variance steps,
+  matching the convention used by `loo::waic()` and emitting a warning
+  with the dropped-draw count (#31).
 
 ## Release process (proposed)
 

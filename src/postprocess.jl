@@ -409,16 +409,43 @@ function compute_waic(chn, d, family::Symbol)
     end
     push!(L_blocks, L_out)
 
+    # Per-observation WAIC accumulators. Under day-rounded zero-delay
+    # observations some draws of a heavy-tailed family (LogNormal in
+    # particular) can yield `logpdf == -Inf` for individual observations.
+    # Those draws contribute `exp(-Inf) = 0` to the predictive-density
+    # average for `lppd`, so they can be filtered before the LSE; for
+    # `p_waic = var(log p)` they would propagate NaN through arithmetic
+    # with -Inf, so we filter them there as well (matching the
+    # convention used by `loo::waic()` in R). `n_dropped` counts the
+    # excluded draws so the caller can sanity-check.
     lppd_terms   = Float64[]
     p_waic_terms = Float64[]
+    n_dropped    = 0
     for L in L_blocks
         for i in axes(L, 2)
-            col = @view L[:, i]
+            col_all = @view L[:, i]
+            finite  = isfinite.(col_all)
+            n_fin   = count(finite)
+            n_dropped += length(col_all) - n_fin
+            if n_fin == 0
+                # No draw assigns positive density: lppd is -Inf so the
+                # final WAIC is +Inf. Record 0 variance to avoid NaN.
+                push!(lppd_terms, -Inf)
+                push!(p_waic_terms, 0.0)
+                continue
+            end
+            col  = col_all[finite]
             Lmax = maximum(col)
-            lppd_i = Lmax + log(mean(exp.(col .- Lmax)))
+            # Divide by the total draw count (`length(col_all)`), not the
+            # finite-only count, so dropped -Inf draws contribute zero.
+            lppd_i = Lmax + log(sum(exp.(col .- Lmax)) / length(col_all))
             push!(lppd_terms, lppd_i)
-            push!(p_waic_terms, var(col; corrected = true))
+            push!(p_waic_terms, n_fin >= 2 ? var(col; corrected = true) : 0.0)
         end
+    end
+
+    if n_dropped > 0
+        @warn "compute_waic: dropped non-finite log-likelihood draws" family n_dropped n_obs=length(lppd_terms)
     end
 
     lppd   = sum(lppd_terms)
