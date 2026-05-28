@@ -188,6 +188,40 @@ end                                                                           #h
 
 plot_ppc(chn_gamma, d, :gamma)
 
+# ## Prior versus posterior
+
+# Pairwise distributions of the four atomic Gamma `log_mean` parameters
+# under the prior used in fitting and the resulting posterior. Diagonal
+# panels show the marginals; off-diagonal panels show the pairwise
+# contours. The shrinkage from prior (grey) to posterior (red) is the
+# visual analogue of the prior-sensitivity table immediately below.
+
+using PairPlots
+
+prior_vs_posterior = let
+    posterior_log_means = (;
+        oa = vec(collect(chn_gamma[@varname(dist_oa.log_mean)])),
+        ad = vec(collect(chn_gamma[@varname(dist_ad.log_mean)])),
+        ac = vec(collect(chn_gamma[@varname(dist_ac.log_mean)])),
+        on = vec(collect(chn_gamma[@varname(dist_on.log_mean)])),
+    )
+    ## Sample the prior directly: each delay's log_mean is
+    ## Normal(log(plausible_median_d), 1.0) at the default prior scale —
+    ## see `bdbv_model` in `src/model.jl`.
+    S = length(posterior_log_means.oa)
+    rng = Random.MersenneTwister(20260519)
+    prior_log_means = (;
+        oa = log(3.0)  .+ randn(rng, S),
+        ad = log(6.0)  .+ randn(rng, S),
+        ac = log(13.0) .+ randn(rng, S),
+        on = log(7.0)  .+ randn(rng, S),
+    )
+    pairplot(
+        PairPlots.Series(prior_log_means;     label = "prior",     color = :grey),
+        PairPlots.Series(posterior_log_means; label = "posterior", color = :firebrick),
+    )
+end
+
 # ## Prior sensitivity
 #
 # Refit the Gamma model under three prior-scale settings (0.5, 1.0
