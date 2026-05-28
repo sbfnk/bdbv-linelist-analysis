@@ -178,6 +178,61 @@ let snippet_path = joinpath(BdbvLinelist.OUTPUT_DIR, "cache", "headline.md")  #h
     nothing                                                                   #hide
 end                                                                           #hide
 
+# ## Posterior predictive check (Gamma)
+#
+# Four panels — one per atomic delay — overlaying the observed integer
+# day histogram with the simulated double-interval-censored posterior
+# predictive (median + 95% band). The dashed black line in each
+# panel marks the Rosello *et al.* 2015 Table 5 mean (4.00, 7.59,
+# 8.00, 8.83 d) for visual comparison.
+
+plot_ppc(chn_gamma, d, :gamma)
+
+# ## Prior sensitivity
+#
+# Refit the Gamma model under three prior-scale settings (0.5, 1.0
+# default, 2.0).
+# The default 1.0 prior gives ≈ ×3-fold prior latitude on the central
+# tendency of each delay; a 4× span across the sweep shifts posterior
+# means by < 5%.
+
+#md # ```@raw html
+#md # <details><summary>Fit: <code>sensitivity()</code> — three prior-scale refits</summary>
+#md # ```
+
+sens = redirect_stdout(devnull) do
+    sensitivity()
+end
+nothing #hide
+
+#md # ```@raw html
+#md # </details>
+#md # ```
+
+# Pull the per-draw posterior mean for each atomic delay out of each
+# sensitivity chain. The Gamma submodel parametrises each delay as
+# `(log_mean, log_shape)`, so `exp(log_mean)` is the population mean.
+
+const DELAY_LM_VARS = (
+    onset_to_admit     = @varname(dist_oa.log_mean),
+    admit_to_death     = @varname(dist_ad.log_mean),
+    admit_to_discharge = @varname(dist_ac.log_mean),
+    onset_to_notif     = @varname(dist_on.log_mean),
+)
+
+chain_mean(chn, var) = exp.(vec(collect(chn[var])))
+
+prior_sensitivity = DataFrame(
+    delay = ["Onset → admission", "Admission → death",
+             "Admission → discharge", "Onset → notification"],
+    scale_05 = [fmt(chain_mean(sens[0.5].chain, v))
+                for v in DELAY_LM_VARS],
+    scale_10 = [fmt(chain_mean(sens[1.0].chain, v))
+                for v in DELAY_LM_VARS],
+    scale_20 = [fmt(chain_mean(sens[2.0].chain, v))
+                for v in DELAY_LM_VARS],
+)
+
 # ## Epidemic curve
 #
 # Weekly onset counts with HCW subcounts stacked.
@@ -361,61 +416,6 @@ logit_coefficients = DataFrame(
         [("HCW status", post.β_hcw),
          ("Probable case definition", post.β_def),
          ("Standardised age", post.β_age)]),
-)
-
-# ## Posterior predictive check (Gamma)
-#
-# Four panels — one per atomic delay — overlaying the observed integer
-# day histogram with the simulated double-interval-censored posterior
-# predictive (median + 95% band). The dashed black line in each
-# panel marks the Rosello *et al.* 2015 Table 5 mean (4.00, 7.59,
-# 8.00, 8.83 d) for visual comparison.
-
-plot_ppc(chn_gamma, d, :gamma)
-
-# ## Prior sensitivity
-#
-# Refit the Gamma model under three prior-scale settings (0.5, 1.0
-# default, 2.0).
-# The default 1.0 prior gives ≈ ×3-fold prior latitude on the central
-# tendency of each delay; a 4× span across the sweep shifts posterior
-# means by < 5%.
-
-#md # ```@raw html
-#md # <details><summary>Fit: <code>sensitivity()</code> — three prior-scale refits</summary>
-#md # ```
-
-sens = redirect_stdout(devnull) do
-    sensitivity()
-end
-nothing #hide
-
-#md # ```@raw html
-#md # </details>
-#md # ```
-
-# Pull the per-draw posterior mean for each atomic delay out of each
-# sensitivity chain. The Gamma submodel parametrises each delay as
-# `(log_mean, log_shape)`, so `exp(log_mean)` is the population mean.
-
-const DELAY_LM_VARS = (
-    onset_to_admit     = @varname(dist_oa.log_mean),
-    admit_to_death     = @varname(dist_ad.log_mean),
-    admit_to_discharge = @varname(dist_ac.log_mean),
-    onset_to_notif     = @varname(dist_on.log_mean),
-)
-
-chain_mean(chn, var) = exp.(vec(collect(chn[var])))
-
-prior_sensitivity = DataFrame(
-    delay = ["Onset → admission", "Admission → death",
-             "Admission → discharge", "Onset → notification"],
-    scale_05 = [fmt(chain_mean(sens[0.5].chain, v))
-                for v in DELAY_LM_VARS],
-    scale_10 = [fmt(chain_mean(sens[1.0].chain, v))
-                for v in DELAY_LM_VARS],
-    scale_20 = [fmt(chain_mean(sens[2.0].chain, v))
-                for v in DELAY_LM_VARS],
 )
 
 # ## See also
