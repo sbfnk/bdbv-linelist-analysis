@@ -44,7 +44,7 @@ no transmission pairs, so neither the incubation period nor the serial
 interval is estimated in this work. See
 [Limitations — Data](limitations.md#Data) for the rationale and the
 MacNeil 2010 / Zaire-EVD priors recommended for downstream nowcasting
-or R<sub>t</sub> work that needs these distributions.
+or Rₜ work that needs these distributions.
 
 ## How to update this page
 
