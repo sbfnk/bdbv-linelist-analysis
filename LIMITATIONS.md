@@ -78,3 +78,17 @@ push delays longer.
 - Transmission. Use Zaire-EVD generation interval priors for
   downstream Rt or nowcasting work.
 - Reservoir or spillover dynamics.
+
+## Downstream priors
+
+For downstream re-applications anchored on the 2012 Isiro outbreak
+(e.g. `epiforecasts/BVDOutbreakSize`), the exploratory exponential
+fit in [Analysis walkthrough §
+Early-phase growth rate](analysis.md#Early-phase-growth-rate) is the
+recommended source of a growth-rate prior. As a one-line summary,
+use **`Normal(0.008, 0.005)` on `r` per day** (posterior mean and SD
+from a Poisson regression on weekly onset counts from week 1 through
+the peak week). The 95% CrI on `r` covers zero — Isiro was a slow,
+noisy rise — so treat this as a weakly-informative prior rather than
+a tight constraint, and re-run `fit_growth_rate(ll)` if you want the
+live posterior summary.

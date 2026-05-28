@@ -65,7 +65,7 @@ function analyse(;
     @info "Diagnostics" family max_rhat=round(diag.rhat, digits = 3) min_ess=round(Int, diag.ess) n_divergent=diag.ndiv
 
     println("\n=== Posterior summary [$family] (median, 95% CrI) ===\n")
-    post = summarise(chn, family)
+    post = summarise(chn, family; d = d)
     save_posterior(post, joinpath(output, "posterior_$(family).csv"))
 
     return chn, post, diag

@@ -57,6 +57,26 @@ convolved marginal equals the sum of the atomic means by linearity
 of expectation; medians and quantiles come from Monte Carlo (500
 samples per posterior draw).
 
+## In-hospital length of stay via mixture post-processing
+
+The length of stay in hospital (admission → departure) is the time an
+admitted case occupies a bed before leaving, by either death or
+discharge. It is derived in post-processing as a two-component mixture
+of the fitted `d_ad` (admission → death) and `d_ac`
+(admission → discharge), with the mixing weight set by the in-hospital
+fatality among admitted cases:
+
+```
+d_los = w · d_ad + (1 − w) · d_ac,   w ~ Beta(1 + n_died, 1 + n_discharged)
+```
+
+`w` is the conjugate posterior on the admitted-case fatality fraction
+(`n_died = 22`, `n_discharged = 15`), drawn once per posterior draw so
+the marginal propagates uncertainty in both the delay distributions and
+the fatality share. Sampled per draw (500 realisations) like the
+convolved marginals. The fatal and survivor pathways are reported
+separately alongside the overall mixture.
+
 ## Priors
 
 Weakly informative, centred on a plausible day count for each delay
@@ -165,8 +185,14 @@ come from per-draw `quantile(dist, 0.5)`.
 
 For each derived marginal (`d_od = d_oa ⊛ d_ad`,
 `d_oc = d_oa ⊛ d_ac`) the script samples 500 realisations per
-posterior draw from the convolution and reports median, mean, and
-95th percentile with 95% CrI across draws.
+posterior draw from the convolution and reports median, mean, SD,
+and 95th percentile with 95% CrI across draws.
+
+For the in-hospital length of stay (`d_los`) the script reports the
+fatal pathway (`d_ad`), the survivor pathway (`d_ac`), and the overall
+mixture (median, mean, SD, 95th percentile with 95% CrI), along with the
+in-hospital fatality weight. Supplied only when `summarise` is given the
+model input `d`.
 
 For the CFR block the script reports the log-OR coefficients and the
 implied marginal CFR at each combination of HCW status and case
