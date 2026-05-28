@@ -75,7 +75,7 @@ Fit `log(λ_t) = α + r·t` (Poisson, weekly bins of onset counts) to
 the rising phase of the Isiro outbreak — week 1 through the
 modal-count week, inclusive. Intended as an upstream prior source
 for downstream re-applications (e.g. outbreak-size work in
-`epiforecasts/BVDOutbreakSize`).
+[`epiforecasts/BVDOutbreakSize`](https://github.com/epiforecasts/BVDOutbreakSize)).
 
 Returns a named tuple with:
 

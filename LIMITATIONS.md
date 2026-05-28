@@ -80,7 +80,7 @@ push delays longer.
 ## Downstream priors
 
 For downstream re-applications anchored on the 2012 Isiro outbreak
-(e.g. `epiforecasts/BVDOutbreakSize`), the exploratory exponential
+(e.g. [`epiforecasts/BVDOutbreakSize`](https://github.com/epiforecasts/BVDOutbreakSize)), the exploratory exponential
 fit in [Analysis walkthrough §
 Early-phase growth rate](analysis.md#Early-phase-growth-rate) is the
 recommended source of a growth-rate prior. As a one-line summary,

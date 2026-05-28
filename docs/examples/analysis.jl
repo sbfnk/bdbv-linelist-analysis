@@ -192,7 +192,8 @@ plot_epi_curve(ll)
 # `log(λ_t) = α + r·t` with weakly-informative `Normal(0, 5)` and
 # `Normal(0, 1)` priors on `α` and `r_week`. Intended as a prior
 # source for downstream re-applications (e.g. the outbreak-size work
-# in `epiforecasts/BVDOutbreakSize`) rather than as a primary
+# in [`epiforecasts/BVDOutbreakSize`](https://github.com/epiforecasts/BVDOutbreakSize))
+# rather than as a primary
 # headline of this analysis. The CrI on `r` covers zero — Isiro was
 # a slow, noisy rise — so use the posterior as a weakly-informative
 # prior, not a tight constraint.
@@ -224,7 +225,8 @@ growth_estimates = DataFrame(
 
 # **Recommended downstream prior on `r` (per day):**
 # `Normal(mean(r_day), sd(r_day))` from the posterior above. A
-# single-line summary intended for `epiforecasts/BVDOutbreakSize`
+# single-line summary intended for
+# [`epiforecasts/BVDOutbreakSize`](https://github.com/epiforecasts/BVDOutbreakSize)
 # and any other downstream model that needs an Isiro-anchored growth
 # prior. See [Limitations](limitations.md#downstream-priors) for
 # caveats.
