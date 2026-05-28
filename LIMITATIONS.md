@@ -48,7 +48,11 @@
   LogNormal parametrisation in the stratified model would need a
   different SD prior to be consistent with the unstratified fit, and
   the Weibull shape prior needed extra truncation that complicated
-  the stratified parametrisation. Gamma is the WAIC winner anyway.
+  the stratified parametrisation. Gamma is the WAIC winner on the
+  global fit, although this does not preclude per-stratum delays
+  being LogNormal or Weibull and aggregating to Gamma at the
+  population level — the restriction is one of convenience rather
+  than fit-based preference.
 
 ## Inference
 
