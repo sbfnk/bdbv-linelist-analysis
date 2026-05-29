@@ -3,10 +3,11 @@
 Two blocks fitted to the 2012 Isiro BDBV line list (n = 52):
 
 1. Four atomic delay components, fitted via per-case latent event
-   times (`T_onset`, `T_admit`, `T_death`, `T_disch`, `T_notif`,
-   sampled where observed) within their respective day windows.
-   Latents are shared across that case's delays, so the
-   natural-history identity `D_oa + D_ad = D_od` holds *per case*
+   times ($T_\mathrm{onset}$, $T_\mathrm{admit}$, $T_\mathrm{death}$,
+   $T_\mathrm{disch}$, $T_\mathrm{notif}$, sampled where observed)
+   within their respective day windows. Latents are shared across
+   that case's delays, so the natural-history identity
+   $D_\mathrm{oa} + D_\mathrm{ad} = D_\mathrm{od}$ holds *per case*
    for every posterior draw.
 2. Stratified case-fatality: Bernoulli outcome with a logistic link
    on HCW status, case definition (Probable vs Confirmed), and
@@ -16,46 +17,59 @@ Three parametric families are supported (`:lognormal`, `:gamma`,
 `:weibull`), selected via the `family` keyword to `bdbv_model`. The
 canonical run uses Gamma — lowest WAIC.
 
-`bdbv_model_stratified(d; family)` adds a `β_*_hcw` log-mean shift to
-each delay so HCW and non-HCW cases share the shape parameter but can
-differ on the central tendency. (This variant still uses the
-marginalised `double_interval_censored` formulation; see
-[LIMITATIONS.md](LIMITATIONS.md).)
+`bdbv_model_stratified(d; family)` adds a per-delay log-mean shift
+$\beta^{\mathrm{hcw}}_*$ so HCW and non-HCW cases share the shape
+parameter but can differ on the central tendency. (This variant
+still uses the marginalised `double_interval_censored` formulation;
+see [LIMITATIONS.md](LIMITATIONS.md).)
 
 ## Common parametrisation across families
 
-All three families share a log-mean / log-shape parametrisation so the
-priors are comparable:
+All three families share a log-location / log-shape parametrisation
+so the priors are comparable. The latent log-location $\log\mu$
+(LogNormal: log-median $\log m$) and log-shape $\log\alpha$ map to
+the natural parameters $\mu = \exp(\log\mu)$ (or $m$) and $\alpha =
+\exp(\log\alpha)$:
 
-| Family   | Latent                | Distribution constructed              |
-|---       |---                    |---                                    |
-| LogNormal| (log_median, log_sd)  | `LogNormal(log_median, log_sd)`       |
-| Gamma    | (log_mean, log_shape) | `Gamma(k, mean/k)` with `k = exp(log_shape)` |
-| Weibull  | (log_mean, log_shape) | `Weibull(α, mean/Γ(1+1/α))` with `α = exp(log_shape)` |
+| Family    | Latent pair              | Distribution constructed                                           |
+|---        |---                       |---                                                                 |
+| LogNormal | $(\log m,\ \log\sigma)$  | $\mathrm{LogNormal}(\log m,\ \sigma)$                              |
+| Gamma     | $(\log\mu,\ \log\alpha)$ | $\mathrm{Gamma}(\alpha,\ \mu/\alpha)$                              |
+| Weibull   | $(\log\mu,\ \log\alpha)$ | $\mathrm{Weibull}\!\left(\alpha,\ \mu / \Gamma(1 + 1/\alpha)\right)$ |
 
-For Weibull, `log_shape` is truncated to `(−1, 1)` so `Γ(1 + 1/α)`
-doesn't blow up. The Weibull stratified model is not supported.
+Here $\mathrm{Gamma}(\alpha,\theta)$ uses the shape-scale
+parametrisation (mean $\alpha\theta$); $\mathrm{Weibull}(\alpha,
+\theta)$ uses shape $\alpha$ and scale $\theta$ (mean $\theta\,
+\Gamma(1 + 1/\alpha)$). For LogNormal, $m$ is the median and
+$\sigma$ the log-scale standard deviation.
+
+For Weibull, $\log\alpha$ is truncated to $(-1, 1)$ so $\Gamma(1 +
+1/\alpha)$ stays well-defined. The Weibull stratified model is not
+supported.
 
 ## Compound delays via convolution post-processing
 
 The model fits only the four atomic components — the natural-history
-identity (`onset → death = onset → admit + admit → death`) is
-satisfied per case by construction, so fitting `onset → death`
-separately would just duplicate the information already in the
-shared latents.
+identity $D_\mathrm{od} = D_\mathrm{oa} + D_\mathrm{ad}$ (and
+likewise $D_\mathrm{oc} = D_\mathrm{oa} + D_\mathrm{ac}$) holds per
+case by construction, so fitting onset → death separately would just
+duplicate the information already in the shared latents.
 
-| Symbol | Component                | n  |
-|---     |---                       |--- |
-| `d_oa` | onset → admission        | 40 |
-| `d_ad` | admission → death        | 22 |
-| `d_ac` | admission → discharge    | 15 |
-| `d_on` | onset → notification     | 38 |
+| Symbol            | Component                | $n$ |
+|---                |---                       |---  |
+| $D_\mathrm{oa}$   | onset → admission        | 40  |
+| $D_\mathrm{ad}$   | admission → death        | 22  |
+| $D_\mathrm{ac}$   | admission → discharge    | 15  |
+| $D_\mathrm{on}$   | onset → notification     | 38  |
 
-`d_od` and `d_oc` are derived in post-processing as sample-level
-convolutions of the population atomic distributions. The mean of the
-convolved marginal equals the sum of the atomic means by linearity
-of expectation; medians and quantiles come from Monte Carlo (500
-samples per posterior draw).
+The marginal compound distributions
+$D_\mathrm{od} = D_\mathrm{oa} * D_\mathrm{ad}$ and
+$D_\mathrm{oc} = D_\mathrm{oa} * D_\mathrm{ac}$ ($*$ denoting
+convolution) are derived in post-processing as sample-level
+convolutions of the population atomic distributions. The mean of
+the convolved marginal equals the sum of the atomic means by
+linearity of expectation; medians and quantiles come from Monte
+Carlo (500 samples per posterior draw).
 
 ## In-hospital length of stay via mixture post-processing
 
@@ -79,69 +93,110 @@ separately alongside the overall mixture.
 
 ## Priors
 
-Weakly informative, centred on a plausible day count for each delay
-(`prior_scale` keyword scales the SDs jointly; default 1.0):
+Weakly informative, centred on a plausible day count for each delay.
+The `prior_scale` keyword (default $s = 1$) scales the SDs jointly:
 
-| Parameter | Prior |
-|---|---|
-| `log_median` / `log_mean` for d_oa | Normal(log 3, `prior_scale`) |
-| `log_median` / `log_mean` for d_ad | Normal(log 6, `prior_scale`) |
-| `log_median` / `log_mean` for d_ac | Normal(log 13, `prior_scale`) |
-| `log_median` / `log_mean` for d_on | Normal(log 7, `prior_scale`) |
-| `log_sd` (LogNormal) | half-Normal(0, `prior_scale`) |
-| `log_shape` (Gamma)  | Normal(0, `prior_scale`) |
-| `log_shape` (Weibull)| Normal(0, `prior_scale`), truncated to (−1, 1) |
-| `β_0` (CFR baseline)        | Normal(0, 2) |
-| `β_hcw`, `β_def`, `β_age`   | Normal(0, 1) |
-| `β_*_hcw` (stratified delay shifts) | Normal(0, 0.5) |
+```math
+\begin{aligned}
+\log m_{\mathrm{oa}} \ \text{or}\ \log\mu_{\mathrm{oa}} &\sim \mathrm{Normal}(\log 3,\ s) \\
+\log m_{\mathrm{ad}} \ \text{or}\ \log\mu_{\mathrm{ad}} &\sim \mathrm{Normal}(\log 6,\ s) \\
+\log m_{\mathrm{ac}} \ \text{or}\ \log\mu_{\mathrm{ac}} &\sim \mathrm{Normal}(\log 13,\ s) \\
+\log m_{\mathrm{on}} \ \text{or}\ \log\mu_{\mathrm{on}} &\sim \mathrm{Normal}(\log 7,\ s)
+\end{aligned}
+```
 
-The 1.0 default SD on the log-medians gives ≈ ×3-fold prior latitude
-either way on the central tendency. A 3-scale sensitivity sweep
-(0.5, 1.0, 2.0) shifts posterior means by < 5%.
+with one scale-parameter prior per family,
+
+```math
+\begin{aligned}
+\log\sigma                       &\sim \mathrm{Normal}_{+}(0,\ s)                 && \text{(LogNormal)} \\
+\log\alpha                       &\sim \mathrm{Normal}(0,\ s)                     && \text{(Gamma)} \\
+\log\alpha\,|\,(-1,1)            &\sim \mathrm{Normal}(0,\ s)\ \text{truncated}   && \text{(Weibull)}
+\end{aligned}
+```
+
+and CFR coefficients
+
+```math
+\beta_0 \sim \mathrm{Normal}(0,\ 2), \quad
+\beta_{\mathrm{hcw}},\ \beta_{\mathrm{def}},\ \beta_{\mathrm{age}}
+   \sim \mathrm{Normal}(0,\ 1), \quad
+\beta^{\mathrm{hcw}}_{*} \sim \mathrm{Normal}(0,\ 0.5),
+```
+
+where the last is the per-delay HCW log-mean shift in the stratified
+model only.
+
+The $s = 1$ default on the log-medians gives roughly threefold prior
+latitude either way on the central tendency. A 3-scale sensitivity
+sweep ($s \in \{0.5,\ 1.0,\ 2.0\}$) shifts posterior means by less
+than 5%.
 
 ## Likelihood
 
-For each case `i`, sample the per-case event-time latents (where
-observed) in reverse-chain order with **Sam Abbott's
-bounded-primary trick** — the secondary event time bounds the
-primary's upper window edge directly, so the support is smoothly
-parametrised and NUTS doesn't see the wedge-shaped corner that the
-naive `T_admit ≤ T_death` constraint would produce at same-day
-cases:
+For each case $i$ with reported day $d^{(i)}_e$ for event $e \in
+\{\mathrm{onset}, \mathrm{admit}, \mathrm{death}, \mathrm{disch},
+\mathrm{notif}\}$, sample the within-day latent times $T^{(i)}_e$ in
+reverse-chain order with **Sam Abbott's bounded-primary trick** —
+the secondary event time bounds the primary's upper window edge
+directly, so the support is smoothly parametrised and NUTS doesn't
+see the wedge-shaped corner that the naive ordering constraint
+$T^{(i)}_{\mathrm{admit}} \le T^{(i)}_{\mathrm{death}}$ would produce
+at same-day cases. For each case, with the (possibly-tightened)
+upper edge $U^{(i)}_e$,
 
-```julia
-T_death ~ Uniform(day, day + 1)                   # leaf event
-T_disch ~ Uniform(day, day + 1)
-T_admit ~ Uniform(day, min(day + 1, T_death, T_disch))
-T_notif ~ Uniform(day, day + 1)
-T_onset ~ Uniform(day, min(day + 1, T_admit, T_notif))
+```math
+\begin{aligned}
+T^{(i)}_{\mathrm{death}} &\sim \mathrm{Uniform}\!\left(d^{(i)}_{\mathrm{death}},\ d^{(i)}_{\mathrm{death}} + 1\right) \\
+T^{(i)}_{\mathrm{disch}} &\sim \mathrm{Uniform}\!\left(d^{(i)}_{\mathrm{disch}},\ d^{(i)}_{\mathrm{disch}} + 1\right) \\
+T^{(i)}_{\mathrm{admit}} &\sim \mathrm{Uniform}\!\left(d^{(i)}_{\mathrm{admit}},\ U^{(i)}_{\mathrm{admit}}\right),
+   &U^{(i)}_{\mathrm{admit}} &= \min\!\left(d^{(i)}_{\mathrm{admit}} + 1,\ T^{(i)}_{\mathrm{death}},\ T^{(i)}_{\mathrm{disch}}\right) \\
+T^{(i)}_{\mathrm{notif}} &\sim \mathrm{Uniform}\!\left(d^{(i)}_{\mathrm{notif}},\ d^{(i)}_{\mathrm{notif}} + 1\right) \\
+T^{(i)}_{\mathrm{onset}} &\sim \mathrm{Uniform}\!\left(d^{(i)}_{\mathrm{onset}},\ U^{(i)}_{\mathrm{onset}}\right),
+   &U^{(i)}_{\mathrm{onset}} &= \min\!\left(d^{(i)}_{\mathrm{onset}} + 1,\ T^{(i)}_{\mathrm{admit}},\ T^{(i)}_{\mathrm{notif}}\right),
+\end{aligned}
 ```
 
-For each ordered pair both observed in the case, add the delay
-likelihood `logpdf(dist_*, t_later − t_earlier)`.
+where any latent whose event is unobserved for case $i$ is dropped.
 
-Each bounded prior also carries a `log(upper − L)` Jacobian, which
-restores the implicit independent-uniform-over-day-window prior of
-the equivalent marginalised double-interval-censoring model. The
-Jacobian vanishes for multi-day cases (where the upper bound is
-just the natural day-window edge) and only contributes when the
-ordering constraint binds (6 same-day cases here).
+For each ordered pair $(e_1, e_2)$ both observed in case $i$, the
+delay likelihood contributes
+
+```math
+\ell^{(i)}_{e_1 e_2} \;=\; \log f_{e_1 e_2}\!\left(T^{(i)}_{e_2} - T^{(i)}_{e_1}\right),
+```
+
+where $f_{e_1 e_2}$ is the density of the fitted delay distribution
+$D_{e_1 e_2}$ for that ordered pair (the four atomic components
+$D_\mathrm{oa}, D_\mathrm{ad}, D_\mathrm{ac}, D_\mathrm{on}$).
+
+Each bounded prior carries a Jacobian $\log\!\left(U^{(i)}_e -
+d^{(i)}_e\right)$, which restores the implicit
+independent-uniform-over-day-window prior of the equivalent
+marginalised double-interval-censoring model. The Jacobian vanishes
+for multi-day cases (where $U^{(i)}_e = d^{(i)}_e + 1$) and only
+contributes when the ordering constraint binds (6 same-day cases
+here).
 
 See Park *et al.* 2024 (medRxiv
 [2024.01.12.24301247](https://doi.org/10.1101/2024.01.12.24301247))
 §2.3.3 for the latent-variable formulation that this builds on.
 
-CFR block:
+**CFR block.** For each case $i$ with outcome $y_i \in \{0, 1\}$,
+HCW indicator $h_i$, probable-case indicator $p_i$, and standardised
+age $z_i$,
 
-```julia
-η_i = β_0 + β_hcw · 1[HCW_i] + β_def · 1[Probable_i] + β_age · age_z_i
-outcome_i ~ Bernoulli(logistic(η_i))
+```math
+\eta_i \;=\; \beta_0 + \beta_{\mathrm{hcw}}\,h_i + \beta_{\mathrm{def}}\,p_i + \beta_{\mathrm{age}}\,z_i,
+\qquad
+y_i \;\sim\; \mathrm{Bernoulli}\!\left(\operatorname{logistic}(\eta_i)\right).
 ```
 
-`age_z` is standardised age (mean 0, SD 1) with the population mean
-imputed for the 3 of 52 missing ages. `logistic(η)` is clamped to
-`(1e-10, 1 - 1e-10)` so `Bernoulli`'s domain check doesn't fail when
-NUTS proposes large `|η|` during warmup.
+The standardised age $z_i$ has sample mean 0 and SD 1, with the
+population mean imputed for the 3 of 52 missing ages.
+$\operatorname{logistic}(\eta)$ is clamped to $(10^{-10},\ 1 -
+10^{-10})$ so the Bernoulli's domain check doesn't fail when NUTS
+proposes large $|\eta|$ during warmup.
 
 ## Inference
 
@@ -171,8 +226,9 @@ all fits means the geometry is well-behaved).
 
 WAIC is computed pointwise: for each observation, the per-draw
 log-likelihood is evaluated from the per-draw distribution parameters,
-and WAIC = −2(lppd − p_waic) aggregated across the 167 observations
-(40 + 22 + 15 + 38 atomic delays + 52 outcomes).
+and $\mathrm{WAIC} = -2\,(\mathrm{lppd} - p_{\mathrm{waic}})$
+aggregated across the 167 observations ($40 + 22 + 15 + 38$ atomic
+delays $+\ 52$ outcomes).
 
 PSIS-LOO would be preferable but adds dependencies; WAIC is adequate
 here.
@@ -181,18 +237,20 @@ here.
 
 For each atomic delay the script reports the posterior median, mean,
 and (for LogNormal) log-SD with 95% CrI. Gamma and Weibull medians
-come from per-draw `quantile(dist, 0.5)`.
+come from the per-draw inverse-CDF at 0.5.
 
-For each derived marginal (`d_od = d_oa ⊛ d_ad`,
-`d_oc = d_oa ⊛ d_ac`) the script samples 500 realisations per
-posterior draw from the convolution and reports median, mean, SD,
-and 95th percentile with 95% CrI across draws.
+For each derived marginal
+($D_\mathrm{od} = D_\mathrm{oa} * D_\mathrm{ad}$ and
+$D_\mathrm{oc} = D_\mathrm{oa} * D_\mathrm{ac}$) the script samples
+500 realisations per posterior draw from the convolution and
+reports median, mean, SD, and 95th percentile with 95% CrI across
+draws.
 
-For the in-hospital length of stay (`d_los`) the script reports the
-fatal pathway (`d_ad`), the survivor pathway (`d_ac`), and the overall
-mixture (median, mean, SD, 95th percentile with 95% CrI), along with the
-in-hospital fatality weight. Supplied only when `summarise` is given the
-model input `d`.
+For the in-hospital length of stay ($D_\mathrm{los}$) the script
+reports the fatal pathway ($D_\mathrm{ad}$), the survivor pathway
+($D_\mathrm{ac}$), and the overall mixture (median, mean, SD, 95th
+percentile with 95% CrI), along with the in-hospital fatality
+weight. Supplied only when `summarise` is given the model input `d`.
 
 For the CFR block the script reports the log-OR coefficients and the
 implied marginal CFR at each combination of HCW status and case
