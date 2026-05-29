@@ -55,12 +55,6 @@
 - InitFromPrior works here. The bounded-primary reparametrisation
   on the per-case latents means NUTS sees a smoothly-bounded support
   (no hard `t_s > t_p` constraint), so warm-up is well-behaved.
-- AutoMooncake (reverse-mode) is used for NUTS gradients. The
-  per-case latent-joint model carries ~150 latent parameters, where
-  reverse-mode scales better than the forward-mode default; it gives
-  a ~1.65× sampling speedup on the canonical Gamma fit with
-  equivalent convergence. AutoForwardDiff remains selectable via the
-  `adtype` keyword to `sample_fit`.
 - Single seed (20260519). The convergence diagnostics are strong but
   a multi-seed run is a useful robustness check.
 
