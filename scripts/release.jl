@@ -14,7 +14,7 @@ d  = build_data(ll)
 results = compare_families()
 chains_by_family = Dict(f => results[f].chain for f in (:lognormal, :gamma, :weibull))
 
-post_gamma = summarise(results[:gamma].chain, :gamma)
+post_gamma = summarise(results[:gamma].chain, :gamma; d = d)
 save_posterior(post_gamma, joinpath("output", "posterior_gamma.csv"))
 
 save_figure(plot_epi_curve(ll), joinpath("figures", "epi_curve.png"))

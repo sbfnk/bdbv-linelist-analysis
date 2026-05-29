@@ -42,6 +42,48 @@
 # Bernoulli's domain check happy when η drifts during NUTS warmup.
 _logistic(x) = clamp(inv(1 + exp(-x)), 1e-10, 1.0 - 1e-10)
 
+# Compress a delay vector into the unique values and their integer
+# multiplicities. Used to weight the censored-likelihood contributions
+# in the marginalised models so each unique (lower, upper) pair only
+# needs one `logpdf` call per evaluation. At day-level censoring and
+# small N this collapses 38 observations down to ~10-15 unique values.
+function _unique_counts(v::AbstractVector)
+    counts = Dict{eltype(v), Int}()
+    for x in v
+        counts[x] = get(counts, x, 0) + 1
+    end
+    uniques = collect(keys(counts))
+    return uniques, [counts[u] for u in uniques]
+end
+
+# Weighted sum of `logpdf(dist, u)` over unique observations `uniques`
+# with integer multiplicities `counts`. Equivalent to summing
+# `logpdf(dist, x)` over the original (de-duplicated) observation
+# vector, but with one `logpdf` call per unique value.
+@inline function _weighted_loglik(dist, uniques::AbstractVector, counts::AbstractVector{Int})
+    s = zero(logpdf(dist, first(uniques)))
+    @inbounds for i in eachindex(uniques)
+        s += counts[i] * logpdf(dist, uniques[i])
+    end
+    return s
+end
+
+# One stratum × delay-component weighted log-likelihood. Builds the
+# doubly-censored distribution from the family + log-mean (which the
+# caller may have shifted by the HCW β) + log-shape, then sums
+# count-weighted `logpdf` over the unique values in `obs`. Returns
+# zero (typed to the param-promoted Real) when `obs` is empty so the
+# caller can pass it through `@addlogprob!` unconditionally.
+@inline function _stratum_loglik(fam, log_mean, log_shape, obs)
+    isempty(obs) && return zero(log_mean + log_shape)
+    u, c = _unique_counts(obs)
+    return _weighted_loglik(
+        double_interval_censored(
+            build_delay_dist(fam, log_mean, log_shape);
+            interval = 1.0),
+        u, c)
+end
+
 # Family singletons used for dispatch. The symbol-keyed public API
 # (`:lognormal`, `:gamma`, `:weibull`) is converted to one of these
 # at a single boundary, `delay_family`; everything internal dispatches
@@ -141,57 +183,82 @@ trick is from Sam Abbott.
     dist_ac ~ to_submodel(delay_prior(fam, log(13.0), prior_scale, prior_scale))
     dist_on ~ to_submodel(delay_prior(fam, log(7.0),  prior_scale, prior_scale))
 
-    N = length(d.case_events)
-    T_onset = Vector{Real}(undef, N)
-    T_admit = Vector{Real}(undef, N)
-    T_death = Vector{Real}(undef, N)
-    T_disch = Vector{Real}(undef, N)
-    T_notif = Vector{Real}(undef, N)
+    # Vectorised latent sampling — each event type is one `arraydist`
+    # over the cases that observe it, so the underlying storage is a
+    # concrete-eltype Vector (fast under ForwardDiff) rather than the
+    # abstract `Vector{Real}` a per-case loop would need to hold both
+    # `Float64` and `Dual`.
+    cases = d.case_events
+    death_idx = findall(c -> !ismissing(c.death), cases)
+    disch_idx = findall(c -> !ismissing(c.disch), cases)
+    notif_idx = findall(c -> !ismissing(c.notif), cases)
+    admit_idx = findall(c -> !ismissing(c.admit), cases)
+    onset_idx = findall(c -> !ismissing(c.onset), cases)
 
-    for i in 1:N
-        c = d.case_events[i]
-        has_onset = !ismissing(c.onset)
-        has_admit = !ismissing(c.admit)
-        has_death = !ismissing(c.death)
-        has_disch = !ismissing(c.disch)
-        has_notif = !ismissing(c.notif)
+    # Leaf events (no upper bound from chain ordering).
+    T_death ~ Turing.arraydist([Uniform(cases[i].death, cases[i].death + 1.0)
+                                for i in death_idx])
+    T_disch ~ Turing.arraydist([Uniform(cases[i].disch, cases[i].disch + 1.0)
+                                for i in disch_idx])
+    T_notif ~ Turing.arraydist([Uniform(cases[i].notif, cases[i].notif + 1.0)
+                                for i in notif_idx])
 
-        if has_death
-            T_death[i] ~ Uniform(c.death, c.death + 1.0)
-        end
-        if has_disch
-            T_disch[i] ~ Uniform(c.disch, c.disch + 1.0)
-        end
-        if has_admit
-            upper = c.admit + 1.0
-            has_death && (upper = min(upper, T_death[i]))
-            has_disch && (upper = min(upper, T_disch[i]))
-            T_admit[i] ~ Uniform(c.admit, upper)
-            # Jacobian to match independent-uniform priors over each
-            # event's day window (the marginalised model's implicit
-            # prior). Vanishes for multi-day cases (`upper - c.admit = 1`).
-            Turing.@addlogprob!(log(upper - c.admit))
-        end
-        if has_notif
-            T_notif[i] ~ Uniform(c.notif, c.notif + 1.0)
-        end
-        if has_onset
-            upper = c.onset + 1.0
-            has_admit && (upper = min(upper, T_admit[i]))
-            has_notif && (upper = min(upper, T_notif[i]))
-            T_onset[i] ~ Uniform(c.onset, upper)
-            Turing.@addlogprob!(log(upper - c.onset))
-        end
+    # Per-case lookup of leaf samples (case index → sampled time).
+    T_death_at = Dict(death_idx .=> T_death)
+    T_disch_at = Dict(disch_idx .=> T_disch)
+    T_notif_at = Dict(notif_idx .=> T_notif)
 
-        has_onset && has_admit &&
-            Turing.@addlogprob!(logpdf(dist_oa, T_admit[i] - T_onset[i]))
-        has_admit && has_death &&
-            Turing.@addlogprob!(logpdf(dist_ad, T_death[i] - T_admit[i]))
-        has_admit && has_disch &&
-            Turing.@addlogprob!(logpdf(dist_ac, T_disch[i] - T_admit[i]))
-        has_onset && has_notif &&
-            Turing.@addlogprob!(logpdf(dist_on, T_notif[i] - T_onset[i]))
-    end
+    # T_admit's upper bound is shrunk by the secondary event time when
+    # the case also has a recorded death and/or discharge (Sam Abbott's
+    # bounded-primary trick — see docstring).
+    admit_uppers = [let c = cases[i]
+        u = c.admit + 1.0
+        haskey(T_death_at, i) && (u = min(u, T_death_at[i]))
+        haskey(T_disch_at, i) && (u = min(u, T_disch_at[i]))
+        u
+    end for i in admit_idx]
+    T_admit ~ Turing.arraydist([Uniform(cases[admit_idx[k]].admit, admit_uppers[k])
+                                for k in eachindex(admit_idx)])
+    # Jacobian to match the marginalised model's implicit
+    # independent-uniform-over-day-window prior. Vanishes
+    # (`log(1) = 0`) on the multi-day cases where the ordering
+    # constraint doesn't bind.
+    Turing.@addlogprob!(sum(log(admit_uppers[k] - cases[admit_idx[k]].admit)
+                            for k in eachindex(admit_idx); init = 0.0))
+
+    T_admit_at = Dict(admit_idx .=> T_admit)
+
+    onset_uppers = [let c = cases[i]
+        u = c.onset + 1.0
+        haskey(T_admit_at, i) && (u = min(u, T_admit_at[i]))
+        haskey(T_notif_at, i) && (u = min(u, T_notif_at[i]))
+        u
+    end for i in onset_idx]
+    T_onset ~ Turing.arraydist([Uniform(cases[onset_idx[k]].onset, onset_uppers[k])
+                                for k in eachindex(onset_idx)])
+    Turing.@addlogprob!(sum(log(onset_uppers[k] - cases[onset_idx[k]].onset)
+                            for k in eachindex(onset_idx); init = 0.0))
+
+    T_onset_at = Dict(onset_idx .=> T_onset)
+
+    # Delay likelihoods: one term per ordered pair both observed in
+    # the case, using the shared per-case latents.
+    Turing.@addlogprob!(sum(
+        logpdf(dist_oa, T_admit[k] - T_onset_at[admit_idx[k]])
+        for k in eachindex(admit_idx) if haskey(T_onset_at, admit_idx[k]);
+        init = 0.0))
+    Turing.@addlogprob!(sum(
+        logpdf(dist_ad, T_death[k] - T_admit_at[death_idx[k]])
+        for k in eachindex(death_idx) if haskey(T_admit_at, death_idx[k]);
+        init = 0.0))
+    Turing.@addlogprob!(sum(
+        logpdf(dist_ac, T_disch[k] - T_admit_at[disch_idx[k]])
+        for k in eachindex(disch_idx) if haskey(T_admit_at, disch_idx[k]);
+        init = 0.0))
+    Turing.@addlogprob!(sum(
+        logpdf(dist_on, T_notif[k] - T_onset_at[notif_idx[k]])
+        for k in eachindex(notif_idx) if haskey(T_onset_at, notif_idx[k]);
+        init = 0.0))
 
     # CFR logistic regression: intercept, HCW indicator, case-definition
     # indicator (probable vs confirmed), and standardised age.
@@ -224,14 +291,26 @@ build the death-pathway mixture marginal.
     fam = delay_family(family)
     dist_cd ~ to_submodel(delay_prior(fam, log(8.0), 1.0, 1.0))
     if !isempty(delays)
-        delays ~ Turing.filldist(
-            double_interval_censored(dist_cd; interval = 1.0),
-            length(delays),
+        # Weighted-by-multiplicity likelihood — see `bdbv_model`.
+        u_cd, c_cd = _unique_counts(delays)
+        Turing.@addlogprob! _weighted_loglik(
+            double_interval_censored(dist_cd; interval = 1.0), u_cd, c_cd,
         )
     end
     # p_admit ~ Beta(1+n_admit, 1+n_comm); independent of the delay fit.
     p_admit ~ Beta(1 + n_admit_died, 1 + n_comm_died)
 end
+
+# Build the doubly-interval-censored filldist for one stratum of one
+# delay component (used by `bdbv_model_stratified` to keep the eight
+# stratum × component likelihood lines free of repeated boilerplate).
+_stratum_dist(fam, log_mean, log_shape, obs) = Turing.filldist(
+    double_interval_censored(
+        build_delay_dist(fam, log_mean, log_shape);
+        interval = 1.0,
+    ),
+    length(obs),
+)
 
 """
 $(TYPEDSIGNATURES)
@@ -267,54 +346,20 @@ multiplicative effect on the delay mean for HCWs vs non-HCWs.
     β_ac_hcw ~ Normal(0.0, 0.5)
     β_on_hcw ~ Normal(0.0, 0.5)
 
-    # Per-stratum likelihoods per delay. Field-name suffix convention:
-    # `_h` = HCW subset, `_n` = non-HCW subset (e.g. `d.ac_n` is the
-    # non-HCW admission→discharge delays). These subsets are pre-split
-    # fields of the data tuple so Turing treats them as observations
-    # rather than parameters.
-    if !isempty(d.oa_h)
-        d.oa_h ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_oa + β_oa_hcw, log_shape_oa);
-            interval = 1.0), length(d.oa_h))
-    end
-    if !isempty(d.oa_n)
-        d.oa_n ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_oa, log_shape_oa);
-            interval = 1.0), length(d.oa_n))
-    end
-
-    if !isempty(d.ad_h)
-        d.ad_h ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_ad + β_ad_hcw, log_shape_ad);
-            interval = 1.0), length(d.ad_h))
-    end
-    if !isempty(d.ad_n)
-        d.ad_n ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_ad, log_shape_ad);
-            interval = 1.0), length(d.ad_n))
-    end
-
-    if !isempty(d.ac_h)
-        d.ac_h ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_ac + β_ac_hcw, log_shape_ac);
-            interval = 1.0), length(d.ac_h))
-    end
-    if !isempty(d.ac_n)
-        d.ac_n ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_ac, log_shape_ac);
-            interval = 1.0), length(d.ac_n))
-    end
-
-    if !isempty(d.on_h)
-        d.on_h ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_on + β_on_hcw, log_shape_on);
-            interval = 1.0), length(d.on_h))
-    end
-    if !isempty(d.on_n)
-        d.on_n ~ Turing.filldist(double_interval_censored(
-            build_delay_dist(fam, log_mean_on, log_shape_on);
-            interval = 1.0), length(d.on_n))
-    end
+    # Per-stratum weighted-by-multiplicity likelihood per delay.
+    # Field-name suffix convention: `_h` = HCW subset, `_n` = non-HCW
+    # subset. `_stratum_loglik` handles the empty-subset case, applies
+    # the HCW shift (when given) to the log-mean, builds the
+    # doubly-censored distribution via `build_delay_dist`, and weights
+    # the per-unique-value `logpdf` calls by multiplicity (issue #4).
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_oa + β_oa_hcw, log_shape_oa, d.oa_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_oa,            log_shape_oa, d.oa_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ad + β_ad_hcw, log_shape_ad, d.ad_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ad,            log_shape_ad, d.ad_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ac + β_ac_hcw, log_shape_ac, d.ac_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_ac,            log_shape_ac, d.ac_n)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_on + β_on_hcw, log_shape_on, d.on_h)
+    Turing.@addlogprob! _stratum_loglik(fam, log_mean_on,            log_shape_on, d.on_n)
 
     # CFR block — same as the unstratified model.
     β_0   ~ Normal(0.0, 2.0)

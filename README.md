@@ -13,6 +13,8 @@ line list — the 2012 Isiro outbreak in Haut-Uélé, DRC, as deposited by
 
 ⚠️ **[Limitations](https://epiforecasts.io/bdbv-linelist-analysis/dev/limitations)** — read before using these estimates: data, model, inference, and generalisability caveats (HTML)
 
+✅ **[Charniga 2024 checklist](https://epiforecasts.io/bdbv-linelist-analysis/dev/charniga-checklist)** — best-practice item-by-item compliance table (HTML)
+
 📦 **[Posterior CSV and figures](https://github.com/epiforecasts/bdbv-linelist-analysis/releases/tag/main-latest)** — `main-latest` rolling release bundle
 
 📖 **[Model description](https://epiforecasts.io/bdbv-linelist-analysis/dev/model)** — priors, likelihood, inference (HTML)
@@ -42,8 +44,13 @@ julia> sensitivity_results  = sensitivity()
 julia> save_figure(plot_ppc(chn, build_data(load_linelist()), :gamma), "figures/ppc_gamma.png")
 ```
 
-A minute or two per family on a laptop. Posterior CSV in `output/`,
-figures in `figures/`.
+A minute or two per family on a laptop. Posterior CSV is written
+to `output/` and figures to `figures/` locally; both directories
+are gitignored. The rolling
+[`main-latest` release](https://github.com/epiforecasts/bdbv-linelist-analysis/releases/tag/main-latest)
+publishes the canonical posterior CSV and figure bundle regenerated
+on every push to `main`, and the [docs site](https://epiforecasts.io/bdbv-linelist-analysis/dev)
+renders the same figures inline.
 
 ## Data provenance
 
@@ -62,7 +69,7 @@ days) is similarly dropped. No other modifications.
 
 ## Authors
 
-Sebastian Funk (London School of Hygiene & Tropical Medicine).
+Sebastian Funk and Sam Abbott (London School of Hygiene & Tropical Medicine).
 
 ## License
 

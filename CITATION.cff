@@ -10,6 +10,11 @@ authors:
     email: sebastian.funk@lshtm.ac.uk
     affiliation: London School of Hygiene & Tropical Medicine
     orcid: https://orcid.org/0000-0002-2842-3406
+  - family-names: Abbott
+    given-names: Sam
+    email: sam.abbott@lshtm.ac.uk
+    affiliation: London School of Hygiene & Tropical Medicine
+    orcid: https://orcid.org/0000-0001-8057-8037
 abstract: >-
   Julia/Turing reanalysis of the 2012 Isiro Bundibugyo Ebola
   outbreak line list (Rosello et al. 2015, eLife), following the
