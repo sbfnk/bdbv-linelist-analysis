@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "31865ad920967af4a2a868d248a877b6e1dc3510"
+project_hash = "60b9ac9aa3fbbf0d17bb775197c904709efdd544"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "bbc22a9a08a0ef6460041086d8a7b27940ed4ffd"
@@ -187,6 +187,12 @@ version = "1.2.0"
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.2"
 
+[[deps.ArnoldiMethod]]
+deps = ["LinearAlgebra", "Random", "StaticArrays"]
+git-tree-sha1 = "d57bd3762d308bded22c3b82d033bff85f6195c6"
+uuid = "ec485272-7323-5ecc-a04f-4719b315124d"
+version = "0.4.0"
+
 [[deps.ArrayInterface]]
 deps = ["Adapt", "LinearAlgebra"]
 git-tree-sha1 = "3d0cabd25fab32390e3bcb82cd67e700aebd9816"
@@ -277,10 +283,10 @@ uuid = "18cc8868-cbac-4acf-b575-c8ff214dc66f"
 version = "1.3.2"
 
 [[deps.BdbvLinelist]]
-deps = ["ADTypes", "ArgParse", "CSV", "CairoMakie", "CensoredDistributions", "Chain", "DataFrames", "DataFramesMeta", "Dates", "Distributions", "DocStringExtensions", "FlexiChains", "Makie", "Printf", "Random", "SpecialFunctions", "Statistics", "Turing"]
+deps = ["ADTypes", "ArgParse", "CSV", "CairoMakie", "CensoredDistributions", "Chain", "DataFrames", "DataFramesMeta", "Dates", "Distributions", "DocStringExtensions", "FlexiChains", "Makie", "Mooncake", "Printf", "Random", "SpecialFunctions", "Statistics", "Turing"]
 path = "."
 uuid = "7e2c4f81-3d8a-4a6c-9f1b-2c3d4e5f7a8b"
-version = "0.0.0"
+version = "0.1.0"
 
 [[deps.Bijectors]]
 deps = ["AbstractPPL", "ArgCheck", "ChainRulesCore", "ChangesOfVariables", "DifferentiationInterface", "Distributions", "DocStringExtensions", "EnzymeCore", "FillArrays", "Functors", "InverseFunctions", "IrrationalConstants", "LinearAlgebra", "LogExpFunctions", "MappedArrays", "Random", "Reexport", "Roots", "SparseArrays", "Statistics", "Test"]
@@ -356,11 +362,27 @@ uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
 version = "1.18.7+0"
 
 [[deps.CensoredDistributions]]
-deps = ["Distributions", "DocStringExtensions", "HypergeometricFunctions", "Integrals", "LogExpFunctions", "Optimization", "OptimizationOptimJL", "PrecompileTools", "Random", "SpecialFunctions", "Statistics"]
-git-tree-sha1 = "b8efdfc3cd23f58043328f8864f85a7699fd4df2"
+deps = ["Distributions", "DocStringExtensions", "FastGaussQuadrature", "Integrals", "LogExpFunctions", "Optimization", "OptimizationOptimJL", "PrecompileTools", "Random", "SpecialFunctions", "Statistics"]
+git-tree-sha1 = "73c3f640bc5d267032de79d65fc9731a69f8764a"
 uuid = "b2eeebe4-5992-4301-9193-7ebc9f62c855"
-version = "0.2.15"
-weakdeps = ["DynamicPPL", "FlexiChains", "Turing"]
+version = "0.2.17"
+
+    [deps.CensoredDistributions.extensions]
+    CensoredDistributionsChainRulesCoreExt = "ChainRulesCore"
+    CensoredDistributionsEnzymeExt = ["ChainRulesCore", "Enzyme"]
+    CensoredDistributionsForwardDiffExt = "ForwardDiff"
+    CensoredDistributionsMooncakeExt = ["ChainRulesCore", "Mooncake"]
+    CensoredDistributionsReverseDiffExt = "ReverseDiff"
+
+    [deps.CensoredDistributions.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
+    Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
+    FlexiChains = "4a37a8b9-6e57-4b92-8664-298d46e639f7"
+    ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+    Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+    ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
+    Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [[deps.Chain]]
 git-tree-sha1 = "765487f32aeece2cf28aa7038e29c31060cb5a69"
@@ -690,6 +712,17 @@ version = "0.30.1"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
+[[deps.DispatchDoctor]]
+deps = ["MacroTools", "Preferences"]
+git-tree-sha1 = "42cd00edaac86f941815fe557c1d01e11913e07c"
+uuid = "8d63f2c5-f18a-4cf2-ba9d-b3f60fc568c8"
+version = "0.4.28"
+weakdeps = ["ChainRulesCore", "EnzymeCore"]
+
+    [deps.DispatchDoctor.extensions]
+    DispatchDoctorChainRulesCoreExt = "ChainRulesCore"
+    DispatchDoctorEnzymeCoreExt = "EnzymeCore"
+
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
@@ -807,6 +840,12 @@ version = "0.3.1"
 git-tree-sha1 = "acebe244d53ee1b461970f8910c235b259e772ef"
 uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
+
+[[deps.FastGaussQuadrature]]
+deps = ["LinearAlgebra", "SpecialFunctions", "StaticArrays"]
+git-tree-sha1 = "ad29c8cb0ea5fb1816926d2a49683f890a8daf64"
+uuid = "442a2c76-b920-505d-bb47-c5924d526838"
+version = "1.2.0"
 
 [[deps.FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
@@ -1048,6 +1087,16 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "8a6dbda1fd736d60cc477d99f2e7a042acfa46e8"
 uuid = "3b182d85-2403-5c21-9c21-1e1f0cc25472"
 version = "1.3.15+0"
+
+[[deps.Graphs]]
+deps = ["ArnoldiMethod", "DataStructures", "Inflate", "LinearAlgebra", "Random", "SimpleTraits", "SparseArrays", "Statistics"]
+git-tree-sha1 = "7eb45fe833a5b7c51cf6d89c5a841d5967e44be3"
+uuid = "86223c79-3864-5bf0-83f7-82e725a168b6"
+version = "1.14.0"
+weakdeps = ["Distributed", "SharedArrays"]
+
+    [deps.Graphs.extensions]
+    GraphsSharedArraysExt = "SharedArrays"
 
 [[deps.GridLayoutBase]]
 deps = ["GeometryBasics", "InteractiveUtils", "Observables"]
@@ -1559,6 +1608,50 @@ deps = ["Distributions", "QuasiMonteCarlo", "Random"]
 git-tree-sha1 = "722ad522068d31954b4a976b66a26aeccbf509ed"
 uuid = "4886b29c-78c9-11e9-0a6e-41e1f4161f7b"
 version = "0.2.0"
+
+[[deps.Mooncake]]
+deps = ["ADTypes", "ChainRulesCore", "DispatchDoctor", "ExprTools", "Graphs", "LinearAlgebra", "MistyClosures", "PrecompileTools", "Random", "Test"]
+git-tree-sha1 = "37f9d952a2496ad62a69614ba0102181e06ba0b5"
+uuid = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
+version = "0.5.29"
+
+    [deps.Mooncake.extensions]
+    MooncakeAllocCheckExt = "AllocCheck"
+    MooncakeBFloat16sExt = "BFloat16s"
+    MooncakeCUDAExt = "CUDA"
+    MooncakeChainRulesExt = "ChainRules"
+    MooncakeDistributionsExt = "Distributions"
+    MooncakeDynamicExpressionsExt = "DynamicExpressions"
+    MooncakeFluxExt = "Flux"
+    MooncakeFunctionWrappersExt = "FunctionWrappers"
+    MooncakeJETExt = "JET"
+    MooncakeLogExpFunctionsExt = "LogExpFunctions"
+    MooncakeLuxLibExt = ["LuxLib", "MLDataDevices", "Static"]
+    MooncakeLuxLibNNlibExt = ["LuxLib", "NNlib"]
+    MooncakeLuxLibSLEEFPiratesExtension = ["LuxLib", "SLEEFPirates"]
+    MooncakeNNlibExt = ["NNlib", "LinearAlgebra"]
+    MooncakeSpecialFunctionsExt = "SpecialFunctions"
+    MooncakecuDNNExt = ["CUDA", "cuDNN"]
+
+    [deps.Mooncake.weakdeps]
+    AllocCheck = "9b6a8646-10ed-4001-bbdc-1d2f46dfbb1a"
+    BFloat16s = "ab4f0b2a-ad5b-11e8-123f-65d77653426b"
+    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+    ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
+    Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+    DynamicExpressions = "a40a106e-89c9-4ca8-8020-a735e8728b6b"
+    Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+    FunctionWrappers = "069b7b12-0de2-55c6-9aab-29f3d0a68a2e"
+    GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
+    JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
+    LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
+    LuxLib = "82251201-b29d-42c6-8e01-566dec8acb11"
+    MLDataDevices = "7e8f7934-dd98-4c1a-8fe8-92b47a384d40"
+    NNlib = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
+    SLEEFPirates = "476501e8-09a2-5ece-8869-fb82de89a1fa"
+    SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+    Static = "aedffcd0-7271-4cad-89d0-dc628f76c6d3"
+    cuDNN = "02a925ec-e4fe-4b08-9a7e-0d78e3d38ccd"
 
 [[deps.MosaicViews]]
 deps = ["MappedArrays", "OffsetArrays", "PaddedViews", "StackViews"]

@@ -20,7 +20,8 @@ using Random: Random, MersenneTwister
 using Statistics: quantile, mean, std, var
 using Turing: Turing, @model, NUTS, MCMCThreads, MCMCSerial, sample, DynamicPPL,
               to_submodel, @varname
-using ADTypes: AutoForwardDiff
+using ADTypes: AutoForwardDiff, AutoMooncake
+import Mooncake
 import FlexiChains
 
 include("data.jl")
