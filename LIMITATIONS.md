@@ -55,8 +55,6 @@
 - InitFromPrior works here. The bounded-primary reparametrisation
   on the per-case latents means NUTS sees a smoothly-bounded support
   (no hard `t_s > t_p` constraint), so warm-up is well-behaved.
-- AutoForwardDiff is used rather than Enzyme. ForwardDiff is fast
-  enough at this size.
 - Single seed (20260519). The convergence diagnostics are strong but
   a multi-seed run is a useful robustness check.
 
