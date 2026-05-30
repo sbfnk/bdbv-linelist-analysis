@@ -71,6 +71,14 @@ days) is similarly dropped. No other modifications.
 
 Sebastian Funk and Sam Abbott (London School of Hygiene & Tropical Medicine).
 
+## Repository administration
+
+Branch protection on `main` is configured via
+[`scripts/setup-branch-protection.sh`](scripts/setup-branch-protection.sh).
+Run it once with an admin-scoped `gh` token to require pull requests,
+passing status checks, conversation resolution, and to block force-pushes
+and deletion on `main`.
+
 ## License
 
 MIT (see [LICENSE](https://github.com/epiforecasts/bdbv-linelist-analysis/blob/main/LICENSE)).
