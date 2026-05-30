@@ -62,14 +62,12 @@ import{c as E,S as s,j as I,m as a}from"./chunks/framework.Di0bVNrJ.js";const p=
 <span class="line"><span>└   n_cases = 52</span></span>
 <span class="line"><span>┌ Info: Fitting family</span></span>
 <span class="line"><span>└   family = :lognormal</span></span>
-<span class="line"><span>┌ Warning: Only a single thread available: MCMC chains are not sampled in parallel</span></span>
-<span class="line"><span>└ @ AbstractMCMC ~/.julia/packages/AbstractMCMC/C1aKp/src/sample.jl:544</span></span>
+<span class="line"><span>┌ Info: Found initial step size</span></span>
+<span class="line"><span>└   ϵ = 0.4</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.4</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.8</span></span>
-<span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.4</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.4</span></span>
 <span class="line"><span>┌ Info: Fit done</span></span>
@@ -81,19 +79,17 @@ import{c as E,S as s,j as I,m as a}from"./chunks/framework.Di0bVNrJ.js";const p=
 <span class="line"><span>└   p_waic = NaN</span></span>
 <span class="line"><span>┌ Info: Fitting family</span></span>
 <span class="line"><span>└   family = :gamma</span></span>
-<span class="line"><span>┌ Warning: Only a single thread available: MCMC chains are not sampled in parallel</span></span>
-<span class="line"><span>└ @ AbstractMCMC ~/.julia/packages/AbstractMCMC/C1aKp/src/sample.jl:544</span></span>
+<span class="line"><span>┌ Info: Found initial step size</span></span>
+<span class="line"><span>└   ϵ = 0.05</span></span>
+<span class="line"><span>┌ Info: Found initial step size</span></span>
+<span class="line"><span>└   ϵ = 0.2</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.2</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.4</span></span>
-<span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.2</span></span>
-<span class="line"><span>┌ Warning: There were 1 divergent transitions. Consider reparameterising your model or using a smaller step size. For adaptive samplers such as NUTS and HMCDA, consider increasing \`target_accept\`.</span></span>
-<span class="line"><span>└ @ Turing.Inference ~/.julia/packages/Turing/4hMHm/src/mcmc/hmc.jl:483</span></span>
-<span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.05</span></span>
 <span class="line"><span>┌ Warning: There were 2 divergent transitions. Consider reparameterising your model or using a smaller step size. For adaptive samplers such as NUTS and HMCDA, consider increasing \`target_accept\`.</span></span>
+<span class="line"><span>└ @ Turing.Inference ~/.julia/packages/Turing/4hMHm/src/mcmc/hmc.jl:483</span></span>
+<span class="line"><span>┌ Warning: There were 1 divergent transitions. Consider reparameterising your model or using a smaller step size. For adaptive samplers such as NUTS and HMCDA, consider increasing \`target_accept\`.</span></span>
 <span class="line"><span>└ @ Turing.Inference ~/.julia/packages/Turing/4hMHm/src/mcmc/hmc.jl:483</span></span>
 <span class="line"><span>┌ Warning: There were 3 divergent transitions. Consider reparameterising your model or using a smaller step size. For adaptive samplers such as NUTS and HMCDA, consider increasing \`target_accept\`.</span></span>
 <span class="line"><span>└ @ Turing.Inference ~/.julia/packages/Turing/4hMHm/src/mcmc/hmc.jl:483</span></span>
@@ -106,16 +102,14 @@ import{c as E,S as s,j as I,m as a}from"./chunks/framework.Di0bVNrJ.js";const p=
 <span class="line"><span>└   p_waic = 9.3</span></span>
 <span class="line"><span>┌ Info: Fitting family</span></span>
 <span class="line"><span>└   family = :weibull</span></span>
-<span class="line"><span>┌ Warning: Only a single thread available: MCMC chains are not sampled in parallel</span></span>
-<span class="line"><span>└ @ AbstractMCMC ~/.julia/packages/AbstractMCMC/C1aKp/src/sample.jl:544</span></span>
-<span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.4</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.20078125000000002</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.05</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.2</span></span>
+<span class="line"><span>┌ Info: Found initial step size</span></span>
+<span class="line"><span>└   ϵ = 0.4</span></span>
 <span class="line"><span>┌ Info: Fit done</span></span>
 <span class="line"><span>│   family = :weibull</span></span>
 <span class="line"><span>│   rhat = 1.005</span></span>
@@ -252,44 +246,38 @@ import{c as E,S as s,j as I,m as a}from"./chunks/framework.Di0bVNrJ.js";const p=
 <span class="line"><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;">    sensitivity</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">()</span></span>
 <span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">end</span></span></code></pre></div><div class="language- vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang"></span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span>┌ Info: Prior sensitivity</span></span>
 <span class="line"><span>└   prior_scale = 0.5</span></span>
-<span class="line"><span>┌ Warning: Only a single thread available: MCMC chains are not sampled in parallel</span></span>
-<span class="line"><span>└ @ AbstractMCMC ~/.julia/packages/AbstractMCMC/C1aKp/src/sample.jl:544</span></span>
-<span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.4</span></span>
-<span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.4</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.2</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.2</span></span>
+<span class="line"><span>┌ Info: Found initial step size</span></span>
+<span class="line"><span>└   ϵ = 0.4</span></span>
+<span class="line"><span>┌ Info: Found initial step size</span></span>
+<span class="line"><span>└   ϵ = 0.4</span></span>
 <span class="line"><span>┌ Info: Prior sensitivity</span></span>
 <span class="line"><span>└   prior_scale = 1.0</span></span>
-<span class="line"><span>┌ Warning: Only a single thread available: MCMC chains are not sampled in parallel</span></span>
-<span class="line"><span>└ @ AbstractMCMC ~/.julia/packages/AbstractMCMC/C1aKp/src/sample.jl:544</span></span>
+<span class="line"><span>┌ Info: Found initial step size</span></span>
+<span class="line"><span>└   ϵ = 0.05</span></span>
+<span class="line"><span>┌ Info: Found initial step size</span></span>
+<span class="line"><span>└   ϵ = 0.2</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.2</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.4</span></span>
-<span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.2</span></span>
-<span class="line"><span>┌ Warning: There were 1 divergent transitions. Consider reparameterising your model or using a smaller step size. For adaptive samplers such as NUTS and HMCDA, consider increasing \`target_accept\`.</span></span>
-<span class="line"><span>└ @ Turing.Inference ~/.julia/packages/Turing/4hMHm/src/mcmc/hmc.jl:483</span></span>
-<span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.05</span></span>
 <span class="line"><span>┌ Warning: There were 2 divergent transitions. Consider reparameterising your model or using a smaller step size. For adaptive samplers such as NUTS and HMCDA, consider increasing \`target_accept\`.</span></span>
+<span class="line"><span>└ @ Turing.Inference ~/.julia/packages/Turing/4hMHm/src/mcmc/hmc.jl:483</span></span>
+<span class="line"><span>┌ Warning: There were 1 divergent transitions. Consider reparameterising your model or using a smaller step size. For adaptive samplers such as NUTS and HMCDA, consider increasing \`target_accept\`.</span></span>
 <span class="line"><span>└ @ Turing.Inference ~/.julia/packages/Turing/4hMHm/src/mcmc/hmc.jl:483</span></span>
 <span class="line"><span>┌ Warning: There were 3 divergent transitions. Consider reparameterising your model or using a smaller step size. For adaptive samplers such as NUTS and HMCDA, consider increasing \`target_accept\`.</span></span>
 <span class="line"><span>└ @ Turing.Inference ~/.julia/packages/Turing/4hMHm/src/mcmc/hmc.jl:483</span></span>
 <span class="line"><span>┌ Info: Prior sensitivity</span></span>
 <span class="line"><span>└   prior_scale = 2.0</span></span>
-<span class="line"><span>┌ Warning: Only a single thread available: MCMC chains are not sampled in parallel</span></span>
-<span class="line"><span>└ @ AbstractMCMC ~/.julia/packages/AbstractMCMC/C1aKp/src/sample.jl:544</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.025</span></span>
+<span class="line"><span>└   ϵ = 0.05</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.2</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
-<span class="line"><span>└   ϵ = 0.05</span></span>
+<span class="line"><span>└   ϵ = 0.025</span></span>
 <span class="line"><span>┌ Info: Found initial step size</span></span>
 <span class="line"><span>└   ϵ = 0.025</span></span></code></pre></div></details><p>Pull the per-draw posterior mean for each atomic delay out of each sensitivity chain. The Gamma submodel parametrises each delay as <code>(log_mean, log_shape)</code>, so <code>exp(log_mean)</code> is the population mean.</p><div class="language-julia vp-adaptive-theme"><button title="Copy Code" class="copy"></button><span class="lang">julia</span><pre class="shiki shiki-themes github-light github-dark vp-code" tabindex="0"><code><span class="line"><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">const</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> DELAY_LM_VARS </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;"> (</span></span>
 <span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">    onset_to_admit     </span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">=</span><span style="--shiki-light:#005CC5;--shiki-dark:#79B8FF;"> @varname</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">(dist_oa</span><span style="--shiki-light:#D73A49;--shiki-dark:#F97583;">.</span><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">log_mean),</span></span>
