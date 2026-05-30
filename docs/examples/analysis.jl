@@ -178,6 +178,29 @@ let snippet_path = joinpath(BdbvLinelist.OUTPUT_DIR, "cache", "headline.md")  #h
     nothing                                                                   #hide
 end                                                                           #hide
 
+# ## Length of stay in hospital
+#
+# Time from admission to leaving hospital (admission → departure). The
+# overall length of stay is a mixture of the fatal pathway
+# (admission → death) and the survivor pathway (admission → discharge),
+# weighted per posterior draw by the in-hospital fatality among admitted
+# cases — `Beta(1 + n_died, 1 + n_discharged)` with 22 deaths and 15
+# discharges. The fatal and survivor rows are the corresponding atomic
+# components; the overall row is the bed-occupancy-relevant marginal
+# across both outcomes.
+
+length_of_stay = DataFrame(
+    pathway = [
+        "Fatal (admission → death)",
+        "Survivor (admission → discharge)",
+        "Overall (mixture)",
+    ],
+    median = [fmt(post.median_ad), fmt(post.median_ac), fmt(post.los_median)],
+    mean   = [fmt(post.mean_ad),   fmt(post.mean_ac),   fmt(post.los_mean)],
+    sd     = ["—",                 "—",                 fmt(post.los_sd)],
+    P95    = ["—",                 "—",                 fmt(post.los_p95)],
+)
+
 # ## Epidemic curve
 #
 # Weekly onset counts with HCW subcounts stacked.
@@ -278,29 +301,6 @@ convolved_marginals = DataFrame(
     mean   = [fmt(post.od_mean),   fmt(post.oc_mean)],
     sd     = [fmt(post.od_sd),     fmt(post.oc_sd)],
     P95    = [fmt(post.od_p95),    fmt(post.oc_p95)],
-)
-
-# ## Length of stay in hospital
-#
-# Time from admission to leaving hospital (admission → departure). The
-# overall length of stay is a mixture of the fatal pathway
-# (admission → death) and the survivor pathway (admission → discharge),
-# weighted per posterior draw by the in-hospital fatality among admitted
-# cases — `Beta(1 + n_died, 1 + n_discharged)` with 22 deaths and 15
-# discharges. The fatal and survivor rows are the corresponding atomic
-# components; the overall row is the bed-occupancy-relevant marginal
-# across both outcomes.
-
-length_of_stay = DataFrame(
-    pathway = [
-        "Fatal (admission → death)",
-        "Survivor (admission → discharge)",
-        "Overall (mixture)",
-    ],
-    median = [fmt(post.median_ad), fmt(post.median_ac), fmt(post.los_median)],
-    mean   = [fmt(post.mean_ad),   fmt(post.mean_ac),   fmt(post.los_mean)],
-    sd     = ["—",                 "—",                 fmt(post.los_sd)],
-    P95    = ["—",                 "—",                 fmt(post.los_p95)],
 )
 
 # ## Gamma shape, scale and SD per atomic delay
