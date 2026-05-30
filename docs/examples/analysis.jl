@@ -168,9 +168,11 @@ headline_estimates = DataFrame(
     "Rosello mean" => [4.00, 7.59, 8.00, 8.83],
 )
 
-# The same numbers are written to disk as a Markdown snippet so the docs
-# build can splice them into the home page — keeps the two views in sync.
-
+#src The block below writes the same headline numbers to disk as a
+#src Markdown snippet that the docs build splices into the home page,
+#src keeping the two views in sync. It is hidden from the rendered
+#src walkthrough because that is a build-system concern, not a reader
+#src concern.
 include(joinpath(pkgdir(BdbvLinelist), "docs", "examples", "_helpers.jl"))    #hide
 let snippet_path = joinpath(BdbvLinelist.OUTPUT_DIR, "cache", "headline.md")  #hide
     mkpath(dirname(snippet_path))                                             #hide
