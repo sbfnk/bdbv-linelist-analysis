@@ -36,3 +36,7 @@ jobs:
       - uses: julia-actions/julia-docdeploy@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Parallelise the MCMC chains across the runner's cores (matches
+          # Release.yml's `-t auto`). Without this the walkthrough's fits run
+          # single-threaded and the build hits the 6h GHA limit.
+          JULIA_NUM_THREADS: auto
