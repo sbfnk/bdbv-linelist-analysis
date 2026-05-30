@@ -41,11 +41,8 @@ ll = load_linelist()
 d  = build_data(ll)
 
 @chain ll begin
-    @rsubset(!ismissing(:Date_of_onset_symp))
-    @select(:Person_ID, :Date_of_onset_symp,
-        :Date_of_Hospitalisation, :Date_of_Death,
-        :Date_hospital_discharge, :Date_of_notification,
-        :is_hcw, :Case_definition)
+    @rsubset !ismissing(:Date_of_onset_symp)
+    @select :Person_ID :Date_of_onset_symp :Date_of_Hospitalisation :Date_of_Death :Date_hospital_discharge :Date_of_notification :is_hcw :Case_definition
     first(8)
 end
 
