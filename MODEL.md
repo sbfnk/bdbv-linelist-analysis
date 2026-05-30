@@ -43,7 +43,7 @@ parametrisation (mean $\alpha\theta$); $\mathrm{Weibull}(\alpha,
 \Gamma(1 + 1/\alpha)$). For LogNormal, $m$ is the median and
 $\sigma$ the log-scale standard deviation.
 
-For Weibull, $\log\alpha$ is truncated to $(-1, 1)$ so $\Gamma(1 +
+For Weibull, $\log\alpha$ is truncated to $(-1.5,\ 1.5)$ so $\Gamma(1 +
 1/\alpha)$ stays well-defined. The Weibull stratified model is not
 supported.
 
@@ -111,7 +111,7 @@ with one scale-parameter prior per family,
 \begin{aligned}
 \log\sigma                       &\sim \mathrm{Normal}_{+}(0,\ s)                 && \text{(LogNormal)} \\
 \log\alpha                       &\sim \mathrm{Normal}(0,\ s)                     && \text{(Gamma)} \\
-\log\alpha\,|\,(-1,1)            &\sim \mathrm{Normal}(0,\ s)\ \text{truncated}   && \text{(Weibull)}
+\log\alpha\,|\,(-1.5,\,1.5)      &\sim \mathrm{Normal}(0,\ s)\ \text{truncated}   && \text{(Weibull)}
 \end{aligned}
 ```
 
